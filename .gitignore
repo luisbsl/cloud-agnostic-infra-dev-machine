@@ -1,0 +1,34 @@
+# Terraform state and plan artifacts (may contain rendered secret values)
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+.terraform/
+.terraform.lock.hcl
+crash.log
+crash.*.log
+
+# Real Terraform variable files (the committed example is allowed)
+terraform.tfvars
+*.auto.tfvars
+!*.tfvars.example
+
+# Kubernetes admin credentials and generated manifests
+kubeconfig
+kubeconfig.*
+*.kubeconfig
+k3s.yaml
+
+# Vault recovery/unseal material and local secret files
+*unseal*
+*recovery-key*
+.env
+.env.*
+!.env.example
+
+# Editor and OS artifacts
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/

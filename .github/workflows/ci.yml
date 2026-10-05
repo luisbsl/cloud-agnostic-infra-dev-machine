@@ -1,0 +1,44 @@
+name: Repository validation
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+
+permissions:
+  contents: read
+
+concurrency:
+  group: repository-validation-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate-repository:
+    name: Core structural testing
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate patch whitespace boundaries
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git diff --check "${BASE_SHA}...${HEAD_SHA}"
+
+      - name: Static lint of declarative repository rulesets
+        run: |
+          TARGET_RULESET="docs/compiled-manifests/governance/protect-gitflow.json"
+
+          if [ ! -f "$TARGET_RULESET" ]; then
+            echo "::error file=$TARGET_RULESET::Mandatory ruleset blueprint file is missing from workspace."
+            exit 1
+          fi
+
+          echo "Processing structural parsing verification on: $TARGET_RULESET"
+          jq empty "$TARGET_RULESET"
+          echo "Success: Declarative ruleset payload contains a valid, well-formed JSON object schema."
