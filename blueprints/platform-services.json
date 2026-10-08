@@ -17,7 +17,8 @@
       "resources": { "cpu": 1, "ramGb": 2 },
       "tags": {
         "mesh": "platform-simulation-vpc",
-        "kuma.io/service": "ingress-gateway-svc"
+        "kuma.io/service": "ingress-gateway-svc",
+        "kuma.io/gateway": "enabled"
       }
     },
     {
