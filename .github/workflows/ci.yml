@@ -42,3 +42,6 @@ jobs:
           echo "Processing structural parsing verification on: $TARGET_RULESET"
           jq empty "$TARGET_RULESET"
           echo "Success: Declarative ruleset payload contains a valid, well-formed JSON object schema."
+
+      - name: Validate platform services blueprint
+        run: bash scripts/validate-blueprint.sh blueprints/platform-services.json

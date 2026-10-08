@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "1.0.0",
+  "mesh": "platform-simulation-vpc",
+  "services": [
+    {
+      "name": "eccs-compute-nodes",
+      "tier": "tier-1-eccs",
+      "resources": { "cpu": 6, "ramGb": 12 },
+      "tags": {
+        "mesh": "platform-simulation-vpc",
+        "kuma.io/service": "eccs-compute-svc"
+      }
+    },
+    {
+      "name": "calbs-cagis-ingress",
+      "tier": "tier-2-3-ingress-gateway",
+      "resources": { "cpu": 1, "ramGb": 2 },
+      "tags": {
+        "mesh": "platform-simulation-vpc",
+        "kuma.io/service": "ingress-gateway-svc"
+      }
+    },
+    {
+      "name": "mkrs-k8s-workload",
+      "tier": "tier-4-mkrs-workload",
+      "resources": { "cpu": 1, "ramGb": 2 },
+      "tags": {
+        "mesh": "platform-simulation-vpc",
+        "kuma.io/service": "mkrs-workload-svc"
+      }
+    }
+  ]
+}
