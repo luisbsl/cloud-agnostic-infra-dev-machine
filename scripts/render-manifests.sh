@@ -11,7 +11,8 @@ command -v jq >/dev/null 2>&1 || { echo "[x] jq is required" >&2; exit 1; }
 jq empty "$BLUEPRINT"
 
 mkdir -p "$OUT_DIR"
-STAGE="$(mktemp -d "${TMPDIR:-/tmp}/render-manifests.XXXXXX")"
+STAGE="${TMPDIR:-/tmp}/render-manifests.$$"
+mkdir "$STAGE"
 trap 'rm -rf "$STAGE"' EXIT INT TERM
 
 # Renders one service as a Dataplane; gateway-enabled services get a delegated gateway block.
@@ -45,7 +46,9 @@ done
 [ "$COUNT" -gt 0 ] || { echo "[x] Blueprint declares no services" >&2; exit 1; }
 
 # Only reached when every service rendered: drop stale output, then publish.
-find "$OUT_DIR" -maxdepth 1 -type f -name '*.yaml' -exec rm -f {} +
+for STALE in "$OUT_DIR"/*.yaml; do
+  [ -e "$STALE" ] && rm -f "$STALE"
+done
 cp "$STAGE"/*.yaml "$OUT_DIR"/
 
 echo "[✓] Rendered $COUNT Dataplane manifest(s) into $OUT_DIR"

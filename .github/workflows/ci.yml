@@ -54,3 +54,6 @@ jobs:
           done
           grep -q "kuma.io/service: eccs-compute-svc" docs/compiled-manifests/dataplanes/eccs-compute-nodes.yaml
           grep -q "gateway:" docs/compiled-manifests/dataplanes/calbs-cagis-ingress.yaml
+
+      - name: Test renderer lifecycle and POSIX syntax
+        run: sh scripts/test-render-manifests.sh
