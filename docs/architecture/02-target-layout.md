@@ -2,7 +2,7 @@
 
 ## 1. Multi-Tier Service Sizing Boundaries
 
-Resources fluctuate dynamically within strict maximum limits based on active platform routing traffic managed via Ansible cgroup definitions:
+Resources fluctuate dynamically within strict maximum limits based on active platform routing traffic managed via Ansible cgroup definitions. Host hardware availability is dynamically discovered via `scripts/profile-host.sh` prior to Ansible orchestration execution[cite: 1].
 
 | Simulated Service Tier         | Engine Mechanism                         | Max vCPU Cap | Max RAM Cap | Network Invariant Scope                             |
 | :----------------------------- | :--------------------------------------- | :----------- | :---------- | :-------------------------------------------------- |
@@ -11,24 +11,23 @@ Resources fluctuate dynamically within strict maximum limits based on active pla
 | **Kuma SDN Control Plane**     | Universal Single-Container Control Plane | 1 Core       | 2 GB        | Centralized Multi-Mesh Virtual VPC Topology         |
 | **TOTAL ECOSYSTEM CEILING**    | **Elastic Platform Capacity Profile**    | **8 Cores**  | **16 GB**   | **Ansible-Orchestrated Software-Defined Network**   |
 
-For the granular programmatic layout and block interaction model mapping these boundaries, see [Target System Design Blueprint](03-system-design.md).
+For the granular programmatic layout and block interaction model mapping these boundaries, see [Target System Design Blueprint](03-system-design.md)[cite: 1].
 
-## 2. Decoupled Service Routing Topology
+## 2. Dynamic Host Hardware Profiling & Capacity Assertion Pipeline
 
-Traffic paths are entirely software-defined and encapsulated inside encrypted mTLS proxy tunnels, keeping all operations fully insulated from the workstation host's physical adapters:
+Before Ansible provisions local platform containers, host capacity is profiled using `scripts/profile-host.sh`[cite: 1]. The values extracted during host profiling determine the dynamic clamping ceilings applied across tiers to guarantee that local workstation performance remains protected[cite: 1].
 
-[ Developer Workstation Host Hardware Pool ]  
-│  
-└── 🎛️ Ansible Orchestration Control Plane (`playbooks/bootstrap-platform.yml`)  
- │  
- └── 🔐 CNCF Kuma Universal Software-Defined VPC Network Core (Central Control Plane)  
- └── [ Logical VPC Boundary: mesh = platform-simulation-vpc ]  
- │  
- ├── 🛜 TIER 2 & 3: INTEGRATED KUMA GATEWAY MODE INGRESS EDGE  
- │ └── 🌐 Exposes Edge Proxies (Binds to Local Host Edge Ports via Envoy)  
- │  
- └── 🏢 TIER 4: CLOUD-AGNOSTIC KUBERNETES WORKLOAD MESH (Envoy Data-Plane)  
- ├── 🖥️ control-01.cloud.internal ──► Cluster API Plane / Kuma Control Plane Sync  
- ├── 🖥️ worker-01.cloud.internal ──► Workload Container Runtime / Envoy Sidecar (`tier: data`)  
- ├── 🖥️ worker-02.cloud.internal ──► Workload Container Runtime / Envoy Sidecar (`tier: data`)  
- └── 🖥️ utility-01.cloud.internal ──► Core Storage Depot / Internal Kuma ZoneIngress Proxy
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Host as Developer Host OS
+    participant Script as scripts/profile-host.sh
+    participant Ansible as Ansible Assertion Engine
+    participant Docker as Docker Cgroup Engine (ECCS)
+
+    Host->>Script: Execute pre-flight profiling
+    Script->>Script: Parse host CPU, RAM, & available disk
+    Script-->>Ansible: Pass host capacity parameters
+    Ansible->>Ansible: Verify host safety boundaries (>= 8 Cores, >= 16 GB RAM)
+    Ansible->>Docker: Provision container tiers within cgroup ceilings (Max 8 Cores / 16 GB)
+```
