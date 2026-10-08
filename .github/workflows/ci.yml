@@ -45,3 +45,12 @@ jobs:
 
       - name: Validate platform services blueprint
         run: bash scripts/validate-blueprint.sh blueprints/platform-services.json
+
+      - name: Render dry data-plane manifests
+        run: |
+          sh scripts/render-manifests.sh
+          for svc in eccs-compute-nodes calbs-cagis-ingress mkrs-k8s-workload; do
+            test -s "docs/compiled-manifests/dataplanes/${svc}.yaml"
+          done
+          grep -q "kuma.io/service: eccs-compute-svc" docs/compiled-manifests/dataplanes/eccs-compute-nodes.yaml
+          grep -q "gateway:" docs/compiled-manifests/dataplanes/calbs-cagis-ingress.yaml

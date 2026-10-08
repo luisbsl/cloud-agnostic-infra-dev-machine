@@ -39,6 +39,9 @@ If modifying specific elements of the infrastructure, developers can leverage An
 # Execute ONLY the "render" compilation step to evaluate metadata tags locally
 ansible-playbook playbooks/bootstrap-platform.yml --tags "render"
 
+# Or run the render stage directly (requires only jq); output is written to the
+# git-ignored docs/compiled-manifests/dataplanes/ directory and stale files are removed
+scripts/render-manifests.sh
 # Execute ONLY the GitHub repository ruleset configuration task blocks
 ansible-playbook playbooks/bootstrap-platform.yml --tags "github-setup"
 ```

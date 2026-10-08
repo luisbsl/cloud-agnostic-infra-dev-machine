@@ -26,7 +26,9 @@ k3s.yaml
 .env.*
 !.env.example
 
-# Editor and OS artifacts
+# Transient rendered data-plane manifests
+docs/compiled-manifests/dataplanes/
+
 .DS_Store
 Thumbs.db
 *.swp
