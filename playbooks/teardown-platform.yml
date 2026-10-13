@@ -11,27 +11,36 @@
       - "kuma-control-plane"
 
   tasks:
-    - name: 🛑 Purge Active Platform Simulation Container Tiers
-      community.docker.docker_container:
-        name: "{{ item }}"
-        state: absent
-        force: true
+    - name: 🔍 Discover Active Platform Simulation Containers
+      ansible.builtin.command:
+        cmd: docker ps -aq --filter "name=^/{{ item }}$"
       loop: "{{ platform_containers }}"
-      register: purge_result
+      register: container_lookup
+      changed_when: false
+      check_mode: false
+
+    - name: 🛑 Purge Active Platform Simulation Container Tiers
+      ansible.builtin.command:
+        cmd: docker rm -f {{ item.item }}
+      loop: "{{ container_lookup.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      when: item.stdout | length > 0
+      changed_when: true
 
     - name: 🧹 Find Transient Compiled Manifest Artifacts
       ansible.builtin.find:
         paths: "{{ transient_manifest_dir }}"
-        patterns: "*.yaml,*.json"
+        patterns: "*.yaml"
       register: dynamic_manifests
-      when: transient_manifest_dir | ansible.builtin.stat
 
     - name: 🗑️ Unlink Scattered Data-Plane Infrastructure Definitions
       ansible.builtin.file:
         path: "{{ item.path }}"
         state: absent
       loop: "{{ dynamic_manifests.files }}"
-      when: dynamic_manifests.matched is defined and dynamic_manifests.matched > 0
+      loop_control:
+        label: "{{ item.path }}"
 
     - name: 🏁 Validate Aggregate Environment Capacity Recovery
       ansible.builtin.debug:
