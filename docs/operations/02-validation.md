@@ -1,6 +1,18 @@
 # Operational Excellence: Integrated Multi-Tier Validation Frameworks
 
-## 1. Triggering Remote Validation Tests via GitHub CLI
+## 1. Local Machine Dependency & Pre-Flight Validation
+
+Auditing host readiness is integrated into the validation suite. Ensure the workstation satisfies all prerequisites detailed in [Software Requirements & Dependency Mapping Matrix](03-dependencies.md):
+
+```bash
+# Audits missing software dependencies and version bounds
+bash scripts/check-requirements.sh
+
+# Verifies Ansible collection requirement resolutions in isolation
+sh scripts/test-requirements.sh
+```
+
+## 2. Triggering Remote Validation Tests via GitHub CLI
 
 To kick off the repository validation actions workflows on-demand from your local terminal workspace without pushing empty commits, use the workflow dispatch tool:
 
@@ -13,7 +25,7 @@ gh run list --workflow=ci.yml --limit 1
 gh run watch
 ```
 
-## 2. Automated Health & Integration Verification
+## 3. Automated Health & Integration Verification
 
 Ansible provides a testing and validation runbook that issues non-destructive structural checks against live ingress paths and the SDN service discovery catalog:
 
@@ -22,7 +34,7 @@ Ansible provides a testing and validation runbook that issues non-destructive st
 	ansible-playbook playbooks/validate-platform.yml
 ```
 
-## 3. Emergency Workspace Evacuation
+## 4. Emergency Workspace Evacuation
 
 If local memory thresholds are reached or an environment requires immediate teardown, execute the evacuation playbook to instantly clear all container footprints and return workstation utilization to zero:
 

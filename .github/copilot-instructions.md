@@ -6,10 +6,14 @@
 - **Resource Constraints**: Total ecosystem capped at 8 vCPUs / 16 GB RAM ceiling.
 - **Token Efficiency Directive**: Keep all generated code, explanations, and specifications compact, concise, and direct. Avoid conversational filler or redundant prose. Reference repository docs (`docs/*`) by file path rather than dumping text into prompts.
 
-## 2. Shell & Scripting Standards
+## 2. Local CI Pre-Flight: Run the same gates as the `Repository validation` workflow before committing, and do not proceed if any fails:
 
-- **POSIX Shell Mandate**: Scripts must use `#!/bin/sh` or `#!/usr/bin/env bash` with strict error handling (`set -eu`). Avoid bashisms when writing POSIX scripts.
-- **Idempotence & Teardown**: Always handle dynamic folder creation (`mkdir -p`) and atomic staging/cleanup (`trap` on `EXIT INT TERM`).
+     - `bash scripts/sandbox-run.sh "jq empty docs/compiled-manifests/governance/protect-gitflow.json"`
+     - `bash scripts/sandbox-run.sh "bash scripts/validate-blueprint.sh blueprints/platform-services.json"`
+     - `bash scripts/sandbox-run.sh "sh scripts/render-manifests.sh && sh scripts/test-render-manifests.sh"`
+     - `bash scripts/sandbox-run.sh "bash scripts/compile-changelog.sh"`
+     - `test -f KANBAN.md && grep -q "Active Focus Boundary" KANBAN.md`
+     - `git diff --check` (and `git diff --cached --check` after staging)
 
 ## 3. Version Control & Gitflow Mandate
 
@@ -26,7 +30,7 @@
      - `bash scripts/validate-blueprint.sh blueprints/platform-services.json`
      - `sh scripts/render-manifests.sh` followed by `sh scripts/test-render-manifests.sh`
      - `git diff --check` (and `git diff --cached --check` after staging)
-     Whenever a story adds or changes a CI-relevant artifact, the story MUST also add or update the matching `ci.yml` step so the pipeline enforces it.
+       Whenever a story adds or changes a CI-relevant artifact, the story MUST also add or update the matching `ci.yml` step so the pipeline enforces it.
   3. **STAGING AND COMMIT**: Staging (`git add`), whitespace checks (`git diff --cached --check`), and conventional commit message (`git commit -m "..."`). Never stage transient output under `docs/compiled-manifests/dataplanes/`.
   4. **PULL REQUEST & CI GATE**: Push branch, open PR via `gh pr create --base develop`, then block on CI with `gh pr checks --watch --fail-fast`. On failure, inspect with `gh run list --branch <branch> --limit 1` and `gh run view <run-id> --log-failed`, fix on the same branch, push, and re-watch. Never merge with failing or pending checks.
   5. **MERGE & SYNC**: Only after all checks pass, merge via `gh pr merge --merge --delete-branch`, then sync local `develop` (`git switch develop && git pull --ff-only`).

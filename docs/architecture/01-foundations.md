@@ -4,6 +4,8 @@
 
 To deliver a fully integrated, multi-tier **Managed Cloud-Agnostic Kubernetes Platform** simulation running entirely within decoupled, on-demand containerized service boundaries. The architecture completely abstracts the developer workstation host, utilizing an **Elastic Container Computing Service (ECCS)** fabric to emulate an enterprise cloud environment. The platform leverages a unified **CNCF Kuma Universal SDN Fabric** orchestrated by **Ansible Playbooks** to simulate isolated multi-tenant VPC networks, matching public cloud deployment typologies without local hardware or network lock-in.
 
+Local machine software tools, collection dependencies, and binary versions required to drive this architecture are explicitly documented in the [Software Requirements & Dependency Mapping Matrix](../operations/03-dependencies.md).
+
 ## 2. Resource Footprint & Elastic Capacity Guardrails
 
 All operational tiers leverage lightweight shared-kernel container environments, scaling consumption dynamically from zero up to strict hardware allocation boundaries:

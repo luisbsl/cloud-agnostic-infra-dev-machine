@@ -2,7 +2,7 @@
 
 This repository defines and delivers a reproducible, local managed Kubernetes service simulation provisioned entirely as code.
 
-To ensure complete decoupling from the developer workstation host, the architecture isolates every layer of the platform ecosystem. Infrastructure execution is managed via **Idempotent Ansible Playbooks** that coordinate our **"Dry" Render Manifest Pipeline** and enforce a strict **16 GB RAM and 8 Cores** maximum resource barrier. Network resources are abstracted using a zero-trust **CNCF Kuma Universal SDN Fabric** representing an isolated virtual multi-tenant cloud VPC, while repository security bounds are asserted via **GitHub CLI & API-Driven Declarative Rulesets**, guaranteeing an authentic cloud platform simulation completely free from vendor lock-in.
+To ensure complete decoupling from the developer workstation host, the architecture isolates every layer of the platform ecosystem. Infrastructure execution is managed exclusively via an **Ephemeral Sandbox Container (`docker+ansible`)** that coordinates our **"Dry" Render Manifest Pipeline** and enforces a strict **16 GB RAM and 8 Cores** maximum resource barrier. Native host toolchains are entirely decoupled from runtime mechanics. Network resources are abstracted using a zero-trust **CNCF Kuma Universal SDN Fabric** representing an isolated virtual multi-tenant cloud VPC, while repository security bounds are asserted via **GitHub CLI & API-Driven Declarative Rulesets**, guaranteeing an authentic cloud platform simulation completely free from vendor lock-in.
 
 ## 🪪 Repository Metadata Baselines
 
@@ -19,11 +19,14 @@ Navigate the system components using the decoupled engineering logs below:
 - **[Mission & Elastic Limits](docs/architecture/01-foundations.md)**: Details the 100% decoupling mandate and defines the **16 GB RAM / 8 Cores** maximum resource constraints audited via Ansible.
 - **[Target Interface Layout Map](docs/architecture/02-target-layout.md)**: Details structural sizing metrics, port definitions, and physical adapter isolation topologies.
 - **[Target System Design Blueprint](docs/architecture/03-system-design.md)**: Conceptual component block schema and step-by-step technical processing flow charted using Mermaid.
+- **[ADR-0005: Decoupled Sandbox Architecture](docs/adr/0005-adopt-containerized-sandbox-dev-environment.md)**: Standardizes the mandatory `docker+ansible` OCI sandbox for 100% workstation decoupling.
 
 ### 2. [Operational Excellence](docs/operations/01-bootstrap.md)
 
-- **[Multi-Tier Bootstrap Runbooks](docs/operations/01-bootstrap.md)**: Procedures for executing the unified **Ansible Playbook orchestration layer**, compiling templates, and pushing **Declarative GitHub Rulesets** via the `gh api`.
+- **[Multi-Tier Bootstrap Runbooks](docs/operations/01-bootstrap.md)**: Procedures for executing the unified **Ansible Playbook orchestration layer** inside the sandbox wrapper, compiling templates, and pushing **Declarative GitHub Rulesets** via the `gh api`.
 - **[Validation & Evacuation Frameworks](docs/operations/02-validation.md)**: Verification workflows for software-defined data-plane tracking and terminal-driven `gh workflow` remote testing checks.
+- **[Software Requirements & Dependency Mapping Matrix](docs/operations/03-dependencies.md)**: Complete specification of local workstation binaries, container sandbox parameters, and automated checking tools (`scripts/check-requirements.sh`).
+- **[Ephemeral Sandbox Container Architecture](docs/operations/04-dev-sandbox.md)**: Comprehensive guide on using the mandatory zero-dependency `docker+ansible` sandbox control plane.
 
 ### 3. [Security & Governance](docs/governance/01-secrets-state.md)
 
