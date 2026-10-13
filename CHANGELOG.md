@@ -21,6 +21,7 @@
 - implement dry render manifest pipeline script (Story 2.1) (bc6b207)
 
 ### 🐛 Fixed
+- reconcile Kanban stories from the Git graph with clean Epic/Story rows (60dbba1)
 - remove whitespace breaking structural validation (da29f94)
 - align ruleset schema and add pull request template (276ed67)
 

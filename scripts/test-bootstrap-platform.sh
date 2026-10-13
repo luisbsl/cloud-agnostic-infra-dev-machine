@@ -9,8 +9,15 @@ for f in scripts/profile-host.sh scripts/sandbox-run.sh; do
 done
 [ -f playbooks/bootstrap-platform.yml ] || fail "playbooks/bootstrap-platform.yml missing"
 
+# Hosts below the full 8 vCPU / 16 GB profile (e.g. CI runners) test against a small tier profile.
+EXTRA=""
+if [ "$(nproc)" -lt 8 ] || [ "$(awk '/MemTotal/{print $2}' /proc/meminfo)" -lt 17000000 ]; then
+    EXTRA="-e '{\"platform_tiers\":[{\"name\":\"small\",\"cpu\":2,\"ram_mb\":2048}]}'"
+    echo "[!] Host below full profile; using small tier profile"
+fi
+
 echo "[•] Scenario 1: passing invariants (--check --tags=render)"
-OUT="$(bash scripts/sandbox-run.sh "ansible-playbook playbooks/bootstrap-platform.yml --check --tags=render" 2>&1)" \
+OUT="$(bash scripts/sandbox-run.sh "ansible-playbook playbooks/bootstrap-platform.yml --check --tags=render $EXTRA" 2>&1)" \
     || { echo "$OUT" >&2; fail "Scenario 1 failed: non-zero exit"; }
 echo "$OUT" | grep -q "Pre-flight bounds check passed" || fail "Scenario 1 failed: missing bounds-check log"
 echo "$OUT" | grep -q "Pre-flight resource monitoring check passed" || fail "Scenario 1 failed: missing monitoring log"
@@ -19,7 +26,7 @@ echo "[✓] Scenario 1 passed"
 
 echo "[•] Scenario 2: ceiling violation must halt"
 set +e
-OUT="$(bash scripts/sandbox-run.sh "ansible-playbook playbooks/bootstrap-platform.yml --check --tags=render -e capacity_ceiling_cpu=4" 2>&1)"
+OUT="$(bash scripts/sandbox-run.sh "ansible-playbook playbooks/bootstrap-platform.yml --check --tags=render -e capacity_ceiling_cpu=1 $EXTRA" 2>&1)"
 RC=$?
 set -e
 [ "$RC" -ne 0 ] || fail "Scenario 2 failed: playbook did not halt"
@@ -31,7 +38,7 @@ echo "[•] Scenario Outline: isolated task selection via tags"
 ALL_COMPONENTS="Trigger Manifest Engine|Computing Fabric Tiers|Software-Defined Network|Declarative Rulesets API"
 check_tag() {
     local tag="$1" expected="$2" out
-    out="$(bash scripts/sandbox-run.sh "ansible-playbook playbooks/bootstrap-platform.yml --check --tags=$tag" 2>&1)" \
+    out="$(bash scripts/sandbox-run.sh "ansible-playbook playbooks/bootstrap-platform.yml --check --tags=$tag $EXTRA" 2>&1)" \
         || { echo "$out" >&2; fail "Tag '$tag' failed: non-zero exit"; }
     echo "$out" | grep -q "TASK \[.*$expected" || fail "Tag '$tag': missing component '$expected'"
     if echo "$out" | grep "TASK \[" | grep -E "$ALL_COMPONENTS" | grep -vq "$expected"; then
