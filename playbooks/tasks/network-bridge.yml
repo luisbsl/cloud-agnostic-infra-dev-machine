@@ -1,0 +1,11 @@
+---
+# Idempotent isolated bridge fabric. Include from a play targeting localhost.
+# Overridable: platform_network_name, platform_network_mtu.
+- name: Provision isolated platform simulation bridge network
+  community.docker.docker_network:
+    name: "{{ platform_network_name | default('platform-simulation-net') }}"
+    driver: bridge
+    driver_options:
+      com.docker.network.driver.mtu: "{{ platform_network_mtu | default('1500') | string }}"
+    state: present
+  tags: [networking]

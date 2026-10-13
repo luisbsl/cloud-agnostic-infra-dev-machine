@@ -58,6 +58,9 @@ jobs:
       - name: Test renderer lifecycle and POSIX syntax
         run: sh scripts/test-render-manifests.sh
 
+      - name: Test milestone-aware changelog and Kanban compiler
+        run: bash scripts/test-compile-changelog.sh
+
       - name: Validate Ansible requirements definition
         run: |
           REQ_FILE="playbooks/requirements.yml"
@@ -89,3 +92,4 @@ jobs:
           bash scripts/test-bootstrap-platform.sh
           bash scripts/test-validate-platform.sh
           bash scripts/test-teardown-platform.sh
+          bash scripts/test-network-bridge.sh
