@@ -8,7 +8,9 @@ KANBAN_FILE="KANBAN.md"
 TEMP_LOG=$(mktemp)
 TEMP_STORIES=$(mktemp)
 TEMP_HIST_LOG=$(mktemp)
-trap 'rm -f "$TEMP_LOG" "$TEMP_STORIES" "$TEMP_HIST_LOG"' EXIT INT TERM
+TEMP_FALLBACK=$(mktemp)
+TEMP_MERGES=$(mktemp)
+trap 'rm -f "$TEMP_LOG" "$TEMP_STORIES" "$TEMP_HIST_LOG" "$TEMP_FALLBACK" "$TEMP_MERGES"' EXIT INT TERM
 
 # 1. Dynamic Active Milestone Discovery Layer
 ACTIVE_MILESTONE_FILE=""
@@ -41,6 +43,27 @@ git log "${LAST_TAG}..${TARGET_BRANCH}" --no-merges --format="%s (%h)" > "$TEMP_
 # Cache global historical logs to cleanly map pre-existing, already-delivered stories
 git log --all --format="%s" > "$TEMP_HIST_LOG"
 
+# Marker-less delivery: a story counts as delivered when its Epic's declared Target Branch was merged
+# (visible in merge-commit subjects) and a later story of the same Epic is already evidenced in the graph.
+git log --all --merges --format="%s" > "$TEMP_MERGES"
+EPIC=""; BRANCH=""
+while IFS= read -r line; do
+    case "$line" in
+        "### Epic "*) EPIC=$(echo "$line" | sed -E 's/^### Epic ([0-9]+).*/\1/'); BRANCH="" ;;
+        *"**Target Branch:**"*) BRANCH=$(echo "$line" | sed -E 's/.*`([^`]+)`.*/\1/') ;;
+        "- **Story "*)
+            [ -n "$BRANCH" ] || continue
+            story=$(echo "$line" | sed -E 's/^- \*\*(Story [0-9]+\.[0-9]+)\*\*.*/\1/')
+            grep -qF "/${BRANCH}" "$TEMP_MERGES" || continue
+            grep -qF "$story" "$TEMP_HIST_LOG" && continue
+            num=${story#Story *.}; epic_no=${story#Story }; epic_no=${epic_no%.*}
+            later=$(grep -oE "Story ${epic_no}\.[0-9]+" "$TEMP_HIST_LOG" | sed -E "s/.*\.//" | sort -n | tail -n 1)
+            if [ -n "$later" ] && [ "$later" -gt "$num" ]; then echo "$story" >> "$TEMP_FALLBACK"; fi
+            ;;
+    esac
+done < "$ACTIVE_MILESTONE_FILE"
+cat "$TEMP_FALLBACK" >> "$TEMP_HIST_LOG"
+
 # 2. Compile Unified Changelog File
 if [ -s "$TEMP_LOG" ]; then
     {
@@ -52,7 +75,7 @@ if [ -s "$TEMP_LOG" ]; then
         HAS_STORIES=false
         if [ -s "$TEMP_STORIES" ]; then
             while read -r story; do
-                if grep -qF "$story" "$TEMP_LOG"; then
+                if grep -qF "$story" "$TEMP_LOG" || grep -qxF "$story" "$TEMP_FALLBACK"; then
                     if [ "$HAS_STORIES" = false ]; then
                         echo "#### Delivered User Stories:"
                         HAS_STORIES=true
@@ -67,7 +90,7 @@ if [ -s "$TEMP_LOG" ]; then
         echo ""
 
         if grep -qE "^feat" "$TEMP_LOG"; then
-            echo "### 🚀 Added"; grep -E "^feat" "$TEMP_LOG" | sed -E 's/^feat(\(.*\))?:[[:space:]]*/- /'; echo ""
+            echo "### 🚀 Added"; grep -E "^feat" "$TEMP_LOG" | sed -E 's/^feat(ure)?(\(.*\))?:[[:space:]]*/- /'; echo ""
         fi
         if grep -qE "^fix" "$TEMP_LOG"; then
             echo "### 🐛 Fixed"; grep -E "^fix" "$TEMP_LOG" | sed -E 's/^fix(\(.*\))?:[[:space:]]*/- /'; echo ""
@@ -77,8 +100,14 @@ if [ -s "$TEMP_LOG" ]; then
         fi
     } > "STAGE_${CHANGELOG_FILE}"
 
-    if [ -f "$CHANGELOG_FILE" ]; then cat "$CHANGELOG_FILE" >> "STAGE_${CHANGELOG_FILE}"; fi
-    mv "STAGE_${CHANGELOG_FILE}" "$CHANGELOG_FILE"
+    # Drop earlier [Unreleased] blocks so repeated runs replace rather than stack them.
+    if [ -f "$CHANGELOG_FILE" ]; then
+        awk '/^## /{skip = ($0 ~ /^## \[Unreleased\]/)} !skip' "$CHANGELOG_FILE" >> "STAGE_${CHANGELOG_FILE}"
+    fi
+    # Trim trailing blank lines so the file passes `git diff --check`.
+    sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' "STAGE_${CHANGELOG_FILE}" > "STAGE_${CHANGELOG_FILE}.trim"
+    mv "STAGE_${CHANGELOG_FILE}.trim" "$CHANGELOG_FILE"
+    rm -f "STAGE_${CHANGELOG_FILE}"
 else
     echo "[✓] Zero unreleased commits detected on branch: ${TARGET_BRANCH}. Bypassing changelog write step."
 fi
@@ -95,22 +124,22 @@ fi
 
     if [ -s "$TEMP_STORIES" ]; then
         while read -r story; do
-            STORY_DESC=$(grep -F "$story" "$ACTIVE_MILESTONE_FILE" | sed -E 's/^[[:space:]]*-[[:space:]]*//' | tr '|' '-')
+            # Description is the text after the story's own bullet marker, never the marker itself.
+            STORY_DESC=$(grep -m 1 -E "^[[:space:]]*-[[:space:]]*\*\*${story}\*\*:" "$ACTIVE_MILESTONE_FILE" \
+                | sed -E 's/^[^:]*\*\*:[[:space:]]*//' | tr '|' '-')
+            EPIC_NO=${story#Story }; EPIC_NO=${EPIC_NO%.*}
+            ROW="**Epic ${EPIC_NO}**: **${story}**: ${STORY_DESC}"
 
             # Cascaded Health Evaluation Logic
             IN_ACTIVE_DELTA=$(grep -qF "$story" "$TEMP_LOG" && echo "true" || echo "false")
             IN_HISTORIC_GIT=$(grep -qF "$story" "$TEMP_HIST_LOG" && echo "true" || echo "false")
-            IN_STATIC_LOG="false"
-            if [ -f "$CHANGELOG_FILE" ] && grep -qF "$story" "$CHANGELOG_FILE"; then
-                IN_STATIC_LOG="true"
-            fi
 
-            if [ "$IN_ACTIVE_DELTA" = "true" ] || [ "$IN_HISTORIC_GIT" = "true" ] || [ "$IN_STATIC_LOG" = "true" ]; then
+            if [ "$IN_ACTIVE_DELTA" = "true" ] || [ "$IN_HISTORIC_GIT" = "true" ]; then
                 # Story passes reconciliation audits and maps securely to Completed bounds
-                echo "| | | **${story}**: ${STORY_DESC} |"
+                echo "| | | ${ROW} |"
             else
                 # Story is truly unexecuted across the historical and incremental ecosystem limits
-                echo "| **${story}**: ${STORY_DESC} | | |"
+                echo "| ${ROW} | | |"
             fi
         done < "$TEMP_STORIES"
     else
