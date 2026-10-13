@@ -57,3 +57,29 @@ jobs:
 
       - name: Test renderer lifecycle and POSIX syntax
         run: sh scripts/test-render-manifests.sh
+
+      - name: Validate Ansible requirements definition
+        run: |
+          REQ_FILE="playbooks/requirements.yml"
+          if [ ! -f "$REQ_FILE" ]; then
+            echo "::error file=$REQ_FILE::Mandatory Ansible requirements file is missing."
+            exit 1
+          fi
+          grep -q "community.docker" "$REQ_FILE"
+          echo "Success: $REQ_FILE cleanly specifies community.docker collection dependency."
+
+      - name: Verify dependency check script syntax
+        run: |
+          bash -n scripts/check-requirements.sh
+
+      - name: Verify Sandbox Container Dockerfile & Wrapper Syntax
+        run: |
+          if [ -f "Dockerfile.dev-sandbox" ]; then
+            docker build -t cloud-agnostic-dev-sandbox:latest -f Dockerfile.dev-sandbox .
+          fi
+          if [ -f "scripts/sandbox-run.sh" ]; then
+            bash -n scripts/sandbox-run.sh
+          fi
+          if [ -f "scripts/test-sandbox-run.sh" ]; then
+            bash scripts/test-sandbox-run.sh
+          fi
