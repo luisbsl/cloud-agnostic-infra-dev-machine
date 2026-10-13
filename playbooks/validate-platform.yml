@@ -1,0 +1,59 @@
+---
+- name: Operational Excellence - Integrated Platform Sizing & Verification Framework
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    target_mesh: "platform-simulation-vpc"
+    kuma_api_port: 5681
+    # Nodes and the mesh may not be provisioned yet; only --check tolerates absence, a real run requires them.
+    require_provisioned: "{{ not ansible_check_mode }}"
+    expected_containers:
+      - { name: "eccs-compute-nodes", service: "eccs-compute-svc" }
+      - { name: "calbs-cagis-ingress", service: "ingress-gateway-svc" }
+      - { name: "mkrs-k8s-workload", service: "mkrs-workload-svc" }
+
+  tasks:
+    - name: 🔍 Audit Active Container Execution Boundaries
+      ansible.builtin.command:
+        cmd: docker inspect --format '{% raw %}{{.State.Running}} {{.State.Paused}}{% endraw %}' {{ item.name }}
+      register: container_facts
+      loop: "{{ expected_containers }}"
+      loop_control:
+        label: "{{ item.name }}"
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: 🛡️ Assert Topology Health and Runtime Invariants
+      ansible.builtin.assert:
+        that:
+          - not (require_provisioned | bool) or item.rc == 0
+          - item.rc != 0 or item.stdout == "true false"
+        fail_msg: "Fatal: Container boundary {{ item.item.name }} is missing or unhealthy!"
+        success_msg: >-
+          {{ 'Success: Verified execution bounds for ' ~ item.item.name
+             if item.rc == 0 else
+             'Audited ' ~ item.item.name ~ ': not provisioned yet (tolerated in check mode).' }}
+      loop: "{{ container_facts.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+
+    - name: 🌐 Query Kuma SDN Control Plane Multi-Mesh Fabric Status
+      ansible.builtin.uri:
+        url: "http://localhost:{{ kuma_api_port }}/meshes/{{ target_mesh }}"
+        method: GET
+        status_code: 200
+      register: sdn_status
+      ignore_errors: true
+      check_mode: false
+
+    - name: 📊 Evaluate Network Isolation Integrity
+      ansible.builtin.assert:
+        that:
+          - not (require_provisioned | bool) or sdn_status.status | default(0) == 200
+        fail_msg: "Fatal: Zero-Trust Kuma SDN Control Plane API or VPC Mesh is unreachable!"
+        success_msg: >-
+          {{ 'Success: Multi-tenant isolated Virtual VPC Mesh detected and active.'
+             if sdn_status.status | default(0) == 200 else
+             'Audited Kuma SDN mesh ' ~ target_mesh ~ ': not reachable yet (tolerated in check mode).' }}

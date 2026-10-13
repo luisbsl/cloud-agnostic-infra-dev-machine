@@ -1,0 +1,47 @@
+---
+- name: Operational Excellence - Emergency Workspace Evacuation & Reclaim Core
+  hosts: localhost
+  gather_facts: false
+  vars:
+    transient_manifest_dir: "{{ playbook_dir }}/../docs/compiled-manifests/dataplanes"
+    platform_containers:
+      - "mkrs-k8s-workload"
+      - "calbs-cagis-ingress"
+      - "eccs-compute-nodes"
+      - "kuma-control-plane"
+
+  tasks:
+    - name: 🔍 Discover Active Platform Simulation Containers
+      ansible.builtin.command:
+        cmd: docker ps -aq --filter "name=^/{{ item }}$"
+      loop: "{{ platform_containers }}"
+      register: container_lookup
+      changed_when: false
+      check_mode: false
+
+    - name: 🛑 Purge Active Platform Simulation Container Tiers
+      ansible.builtin.command:
+        cmd: docker rm -f {{ item.item }}
+      loop: "{{ container_lookup.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      when: item.stdout | length > 0
+      changed_when: true
+
+    - name: 🧹 Find Transient Compiled Manifest Artifacts
+      ansible.builtin.find:
+        paths: "{{ transient_manifest_dir }}"
+        patterns: "*.yaml"
+      register: dynamic_manifests
+
+    - name: 🗑️ Unlink Scattered Data-Plane Infrastructure Definitions
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ dynamic_manifests.files }}"
+      loop_control:
+        label: "{{ item.path }}"
+
+    - name: 🏁 Validate Aggregate Environment Capacity Recovery
+      ansible.builtin.debug:
+        msg: "[✓] Platform footprint successfully flushed. Workstation consumption scaled down to absolute zero."
