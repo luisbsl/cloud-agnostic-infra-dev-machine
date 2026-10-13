@@ -17,7 +17,7 @@
 
   tasks:
     - name: Pre-flight capacity guardrail
-      tags: [render, preflight]
+      tags: [always, preflight]
       block:
         - name: 🔍 Gather hardware facts visible to the sandbox
           ansible.builtin.setup:
@@ -52,3 +52,37 @@
             success_msg: >-
               Pre-flight resource monitoring check passed: environment provides
               {{ ansible_facts.processor_vcpus }} vCPU / {{ ansible_facts.memtotal_mb }} MB.
+
+    - name: Trigger Manifest Engine
+      ansible.builtin.command:
+        cmd: sh scripts/render-manifests.sh
+        chdir: "{{ playbook_dir }}/.."
+      tags: [render]
+      changed_when: true
+
+    - name: Verify Docker daemon reachability for Computing Fabric Tiers
+      ansible.builtin.command: docker info --format '{{ '{{' }}.ServerVersion{{ '}}' }}'
+      register: compute_host_info
+      changed_when: false
+      check_mode: false
+      tags: [compute]
+
+    - name: Report Docker daemon readiness for Computing Fabric Tiers
+      ansible.builtin.debug:
+        msg: "Docker daemon reachable; scope ready for tier provisioning."
+      when: compute_host_info.rc == 0
+      tags: [compute]
+
+    - name: Validate Software-Defined Network blueprint scope
+      ansible.builtin.stat:
+        path: "{{ playbook_dir }}/../blueprints/platform-services.json"
+      register: network_blueprint
+      failed_when: not network_blueprint.stat.exists
+      tags: [networking]
+
+    - name: Validate Declarative Rulesets API payload
+      ansible.builtin.stat:
+        path: "{{ playbook_dir }}/../docs/compiled-manifests/governance/protect-gitflow.json"
+      register: ruleset_payload
+      failed_when: not ruleset_payload.stat.exists
+      tags: [github-setup]

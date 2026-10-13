@@ -26,3 +26,21 @@ set -e
 echo "$OUT" | grep -q "Hardware boundary violation" || fail "Scenario 2 failed: missing violation message"
 [ -z "$(docker ps -a --filter ancestor=cloud-agnostic-dev-sandbox:latest -q)" ] || fail "Scenario 2 failed: lingering container"
 echo "[✓] Scenario 2 passed"
+
+echo "[•] Scenario Outline: isolated task selection via tags"
+ALL_COMPONENTS="Trigger Manifest Engine|Computing Fabric Tiers|Software-Defined Network|Declarative Rulesets API"
+check_tag() {
+    local tag="$1" expected="$2" out
+    out="$(bash scripts/sandbox-run.sh "ansible-playbook playbooks/bootstrap-platform.yml --check --tags=$tag" 2>&1)" \
+        || { echo "$out" >&2; fail "Tag '$tag' failed: non-zero exit"; }
+    echo "$out" | grep -q "TASK \[.*$expected" || fail "Tag '$tag': missing component '$expected'"
+    if echo "$out" | grep "TASK \[" | grep -E "$ALL_COMPONENTS" | grep -vq "$expected"; then
+        fail "Tag '$tag': executed components outside '$expected'"
+    fi
+    [ -z "$(docker ps -a --filter ancestor=cloud-agnostic-dev-sandbox:latest -q)" ] || fail "Tag '$tag': lingering container"
+    echo "[✓] Tag '$tag' isolated to '$expected'"
+}
+check_tag render "Trigger Manifest Engine"
+check_tag compute "Computing Fabric Tiers"
+check_tag networking "Software-Defined Network"
+check_tag github-setup "Declarative Rulesets API"
