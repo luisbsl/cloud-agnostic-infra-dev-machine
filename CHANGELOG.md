@@ -37,4 +37,3 @@ feature: implement dry render manifest pipeline script (Story 2.1) (bc6b207)
 ### ⚙️ Infrastructure & Sandbox Control Plane
 - embed Kuma SDN metadata tags into service blueprint schema (Story 1.2) (d342f24)
 - define platform service blueprint JSON schema for Tier 1-4 services (8d918ec)
-

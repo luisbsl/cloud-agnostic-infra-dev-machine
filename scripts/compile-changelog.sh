@@ -48,7 +48,7 @@ if [ -s "$TEMP_LOG" ]; then
         echo ""
         echo "### 🏆 Active Tracking Context: ${MILESTONE_NAME}"
         echo ""
-        
+
         HAS_STORIES=false
         if [ -s "$TEMP_STORIES" ]; then
             while read -r story; do
@@ -92,11 +92,11 @@ fi
     echo ""
     echo "| 🟥 BACKLOG / TODO | 🟨 IN PROGRESS | 🟩 DONE (VERIFIED IN DEV/DEVELOP) |"
     echo "| :--- | :--- | :--- |"
-    
+
     if [ -s "$TEMP_STORIES" ]; then
         while read -r story; do
             STORY_DESC=$(grep -F "$story" "$ACTIVE_MILESTONE_FILE" | sed -E 's/^[[:space:]]*-[[:space:]]*//' | tr '|' '-')
-            
+
             # Cascaded Health Evaluation Logic
             IN_ACTIVE_DELTA=$(grep -qF "$story" "$TEMP_LOG" && echo "true" || echo "false")
             IN_HISTORIC_GIT=$(grep -qF "$story" "$TEMP_HIST_LOG" && echo "true" || echo "false")
