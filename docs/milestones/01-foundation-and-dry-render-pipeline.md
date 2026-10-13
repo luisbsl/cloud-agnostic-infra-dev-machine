@@ -97,9 +97,9 @@ git pull --ff-only origin develop
 
 ## 4. Definition of Done (DoD) for Milestone 01
 
-1. [ ] `blueprints/platform-services.json` created and verified via `jq` parsing assertions.
-2. [ ] `scripts/render-manifests.sh` tested inside the OCI environment, outputting transient data under `docs/compiled-manifests/dataplanes/`.
-3. [ ] `playbooks/bootstrap-platform.yml` completes pre-flight resource monitoring thresholds without workstation drift.
-4. [ ] `playbooks/validate-platform.yml` and `playbooks/teardown-platform.yml` created and executing within container cgroups.
-5. [ ] `scripts/compile-changelog.sh` evaluates log streams, reconciling historical user stories (1.1, 1.2, 2.1, 2.2) perfectly inside `KANBAN.md`.
-6. [ ] All pull requests merged into `develop` through explicit merge commits (`--merge`) with active verification checks passing.
+1. [x] `blueprints/platform-services.json` created and verified via `jq` parsing assertions.
+2. [x] `scripts/render-manifests.sh` tested inside the OCI environment, outputting transient data under `docs/compiled-manifests/dataplanes/`.
+3. [x] `playbooks/bootstrap-platform.yml` completes pre-flight resource monitoring thresholds without workstation drift.
+4. [x] `playbooks/validate-platform.yml` and `playbooks/teardown-platform.yml` created and executing within container cgroups.
+5. [x] `scripts/compile-changelog.sh` evaluates log streams, reconciling historical user stories (1.1, 1.2, 2.1, 2.2) perfectly inside `KANBAN.md`.
+6. [x] All pull requests merged into `develop` through explicit merge commits (`--merge`) with active verification checks passing.

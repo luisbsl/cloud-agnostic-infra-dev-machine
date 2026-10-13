@@ -26,6 +26,14 @@
               - ansible_processor_vcpus
               - ansible_memtotal_mb
 
+        - name: 📊 Profile host hardware via scripts/profile-host.sh
+          ansible.builtin.command:
+            cmd: bash scripts/profile-host.sh
+            chdir: "{{ playbook_dir }}/.."
+          register: host_profile
+          changed_when: false
+          check_mode: false
+
         - name: 🛡️ Assert requested allocation fits inside the 8 vCPU / 16 GB ceiling
           ansible.builtin.assert:
             that:
