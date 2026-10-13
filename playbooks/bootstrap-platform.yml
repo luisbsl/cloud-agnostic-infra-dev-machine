@@ -1,0 +1,54 @@
+---
+- name: Pre-Flight Host Capacity Assertion and Guardrail Orchestration
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    # Aggregate safety ceiling for the whole simulated platform.
+    capacity_ceiling_cpu: 8
+    capacity_ceiling_ram_mb: 16384
+    # Requested allocation per tier (matches scripts/profile-host.sh, 16 GB profile).
+    platform_tiers:
+      - { name: "eccs-compute-nodes", cpu: 6, ram_mb: 12288 }
+      - { name: "calbs-cagis-ingress", cpu: 1, ram_mb: 2048 }
+      - { name: "kuma-sdn-control-plane", cpu: 1, ram_mb: 2048 }
+    requested_cpu: "{{ platform_tiers | map(attribute='cpu') | sum }}"
+    requested_ram_mb: "{{ platform_tiers | map(attribute='ram_mb') | sum }}"
+
+  tasks:
+    - name: Pre-flight capacity guardrail
+      tags: [render, preflight]
+      block:
+        - name: 🔍 Gather hardware facts visible to the sandbox
+          ansible.builtin.setup:
+            gather_subset: [hardware]
+            filter:
+              - ansible_processor_vcpus
+              - ansible_memtotal_mb
+
+        - name: 🛡️ Assert requested allocation fits inside the 8 vCPU / 16 GB ceiling
+          ansible.builtin.assert:
+            that:
+              - requested_cpu | int <= capacity_ceiling_cpu | int
+              - requested_ram_mb | int <= capacity_ceiling_ram_mb | int
+            fail_msg: >-
+              Hardware boundary violation: requested {{ requested_cpu }} vCPU /
+              {{ requested_ram_mb }} MB exceeds ceiling
+              {{ capacity_ceiling_cpu }} vCPU / {{ capacity_ceiling_ram_mb }} MB.
+            success_msg: >-
+              Pre-flight bounds check passed: requested {{ requested_cpu }} vCPU /
+              {{ requested_ram_mb }} MB within ceiling
+              {{ capacity_ceiling_cpu }} vCPU / {{ capacity_ceiling_ram_mb }} MB.
+
+        - name: 🛡️ Assert the environment can actually supply the requested allocation
+          ansible.builtin.assert:
+            that:
+              - ansible_facts.processor_vcpus | int >= requested_cpu | int
+              - ansible_facts.memtotal_mb | int >= requested_ram_mb | int
+            fail_msg: >-
+              Hardware boundary violation: environment provides
+              {{ ansible_facts.processor_vcpus }} vCPU / {{ ansible_facts.memtotal_mb }} MB
+              but {{ requested_cpu }} vCPU / {{ requested_ram_mb }} MB is required.
+            success_msg: >-
+              Pre-flight resource monitoring check passed: environment provides
+              {{ ansible_facts.processor_vcpus }} vCPU / {{ ansible_facts.memtotal_mb }} MB.
