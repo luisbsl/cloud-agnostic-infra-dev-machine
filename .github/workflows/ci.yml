@@ -83,3 +83,9 @@ jobs:
           if [ -f "scripts/test-sandbox-run.sh" ]; then
             bash scripts/test-sandbox-run.sh
           fi
+
+      - name: Verify Ansible playbooks (pre-flight, tags, validation, teardown)
+        run: |
+          bash scripts/test-bootstrap-platform.sh
+          bash scripts/test-validate-platform.sh
+          bash scripts/test-teardown-platform.sh
