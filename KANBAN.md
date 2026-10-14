@@ -1,7 +1,7 @@
 # 📋 Copilot AI-Driven Dynamic Kanban Board
 
 **Active Focus Boundary:** Milestone 02: Live Container Orchestration & Kuma SDN Fabric Integration
-**Last Matrix Compilation:** 2026-10-14 00:28:23
+**Last Matrix Compilation:** 2026-10-14 00:41:53
 
 <details><summary>🏁 Milestone 01: Core Blueprint Schema, Render Pipeline & Ansible Orchestration Foundation — Completed</summary>
 
@@ -25,7 +25,7 @@
 | :--- | :--- | :--- |
 | | | **Epic 1**: **Story 1.1**: Implement an Ansible task using `community.docker.docker_network` to define a dedicated bridge network named `platform-simulation-net` with MTU boundaries set to `1500`. |
 | | | **Epic 1**: **Story 1.2**: Inject dynamic metadata labels into the network lifecycle layer to isolate it from external developer stack topologies. |
-| **Epic 2**: **Story 2.1**: Implement an idempotent container allocation blueprint targeting `kuma-control-plane` using pinned components (`docker.io/kong/kuma-cp:2.9.1`). | | |
+| | | **Epic 2**: **Story 2.1**: Implement an idempotent container allocation blueprint targeting `kuma-control-plane` using pinned components (`docker.io/kong/kuma-cp:2.9.1`). |
 | **Epic 2**: **Story 2.2**: Build a robust `ansible.builtin.uri` validation loop that queries the API endpoint `http://localhost:5681/meshes` with an exponential backoff retry mechanism (Max 10 attempts). | | |
 | **Epic 3**: **Story 3.1**: Implement loop routines that parse `blueprints/platform-services.json` to spawn active infrastructure workloads (`eccs-compute-nodes`, `calbs-cagis-ingress`, `mkrs-k8s-workload`). | | |
 | **Epic 3**: **Story 3.2**: Explicitly map cgroup capacity caps (`cpus`, `memory_limit`) directly into the docker runtime configs to protect developer machine stability. | | |
