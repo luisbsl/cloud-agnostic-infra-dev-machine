@@ -4,12 +4,14 @@
 
 #### Delivered User Stories:
   - ✅ Story 1.1
+  - ✅ Story 1.2
 
 #### 🐛 Fixed
 - let bootstrap tests adapt to hosts below the full resource profile (bb6cb78)
 
 #### ⚙️ Infrastructure & Sandbox Control Plane
 - implement idempotent docker bridge network fabric and milestone-aware changelog compiler (M02 Epic 1 / Story 1.1) (8e0003a)
+- inject dynamic insulation labels into platform network (M02 Epic 1 / Story 1.2) (75c1fa7)
 
 ### 🏁 Completed Milestone: Milestone 01: Core Blueprint Schema, Render Pipeline & Ansible Orchestration Foundation
 
