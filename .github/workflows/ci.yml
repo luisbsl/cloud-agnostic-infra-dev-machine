@@ -94,3 +94,4 @@ jobs:
           bash scripts/test-teardown-platform.sh
           bash scripts/test-network-bridge.sh
           bash scripts/test-kuma-cp-core.sh
+          bash scripts/test-kuma-cp-health.sh

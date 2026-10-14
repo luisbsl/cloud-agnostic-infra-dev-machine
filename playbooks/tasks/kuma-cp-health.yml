@@ -1,0 +1,13 @@
+---
+# Blocks until the Kuma REST API answers HTTP 200, with exponential backoff (delay = min(base * 2^(n-1), cap)).
+# Fails immediately with a descriptive error once the attempt ceiling is reached.
+# Overridable: kuma_cp_api_url, kuma_cp_health_max_attempts, kuma_cp_health_base_delay, kuma_cp_health_max_delay.
+# The URL must be reachable from where Ansible runs (host network, or override kuma_cp_api_url).
+- name: Initialise Kuma health probe state
+  ansible.builtin.set_fact:
+    kuma_cp_health_attempt: 1
+  tags: [compute, health]
+
+- name: Probe Kuma control plane with exponential backoff
+  ansible.builtin.include_tasks: kuma-cp-health-attempt.yml
+  tags: [compute, health]
