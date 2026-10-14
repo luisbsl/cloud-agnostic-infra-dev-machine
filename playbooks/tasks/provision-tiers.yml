@@ -1,0 +1,76 @@
+---
+# Idempotently spawns one container per service in blueprints/platform-services.json on the isolated bridge.
+# Requires the bridge from network-bridge.yml. Containers carry the blueprint tier/tags as labels and are
+# capped to the blueprint cpu/ramGb so they cannot exceed the declared allocation.
+# Overridable: tier_blueprint_path, tier_image, tier_name_prefix, platform_network_name.
+- name: Load abstract platform service blueprint
+  ansible.builtin.set_fact:
+    tier_services: >-
+      {{ (lookup('file', tier_blueprint_path | default(playbook_dir ~ '/../blueprints/platform-services.json'))
+          | from_json).services }}
+  tags: [compute]
+
+- name: Inspect target network for tier workloads
+  community.docker.docker_network_info:
+    name: "{{ platform_network_name | default('platform-simulation-net') }}"
+  register: tier_network
+  tags: [networking, compute]
+
+- name: Assert isolated bridge network is operational
+  ansible.builtin.assert:
+    that:
+      - tier_network.exists
+      - tier_services | length > 0
+    fail_msg: "Network {{ platform_network_name | default('platform-simulation-net') }} is missing or blueprint has no services; run tasks/network-bridge.yml first."
+    quiet: true
+  tags: [networking, compute]
+
+- name: Assert blueprint tiers plus the Kuma control plane fit the 8 vCPU / 16 GB ceiling
+  ansible.builtin.assert:
+    that:
+      - (tier_services | map(attribute='resources.cpu') | sum) + (kuma_cp_cpus | default(1) | int) <= 8
+      - (tier_services | map(attribute='resources.ramGb') | sum) * 1024 + (kuma_cp_memory_mb | default(2048) | int) <= 16384
+    fail_msg: "Blueprint tiers plus the Kuma control plane exceed the 8 vCPU / 16 GB platform ceiling."
+    quiet: true
+  tags: [compute]
+
+- name: Provision tier workload containers
+  community.docker.docker_container:
+    name: "{{ tier_name_prefix | default('') }}{{ item.name }}"
+    image: "{{ tier_image | default('docker.io/library/alpine:3.24.2') }}"
+    command: ["sleep", "infinity"]
+    state: started
+    restart_policy: unless-stopped
+    cpus: "{{ item.resources.cpu }}"
+    memory: "{{ item.resources.ramGb | int * 1024 }}M"
+    networks:
+      - name: "{{ platform_network_name | default('platform-simulation-net') }}"
+    network_mode: "{{ platform_network_name | default('platform-simulation-net') }}"
+    labels: "{{ {'platform.simulation.tier': item.tier} | combine(item.tags) }}"
+  loop: "{{ tier_services }}"
+  loop_control:
+    label: "{{ item.name }}"
+  tags: [compute]
+
+- name: Collect tier container state
+  community.docker.docker_container_info:
+    name: "{{ tier_name_prefix | default('') }}{{ item.name }}"
+  loop: "{{ tier_services }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: tier_state
+  changed_when: false
+  tags: [compute]
+
+- name: Assert every tier is running on the isolated network
+  ansible.builtin.assert:
+    that:
+      - item.exists
+      - item.container.State.Status == 'running'
+      - (platform_network_name | default('platform-simulation-net')) in item.container.NetworkSettings.Networks
+    fail_msg: "Tier {{ item.item.name }} is not running on {{ platform_network_name | default('platform-simulation-net') }}."
+    quiet: true
+  loop: "{{ tier_state.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  tags: [compute]

@@ -6,8 +6,9 @@ Resources fluctuate dynamically within strict maximum limits based on active pla
 
 | Simulated Service Tier         | Engine Mechanism                         | Max vCPU Cap | Max RAM Cap | Network Invariant Scope                             |
 | :----------------------------- | :--------------------------------------- | :----------- | :---------- | :-------------------------------------------------- |
-| **Computing Fabric (4 Nodes)** | On-Demand Container Clusters             | 6 Cores      | 12 GB       | Managed Kuma Data-Plane Proxy Workspace             |
+| **Computing Fabric (4 Nodes)** | On-Demand Container Clusters             | 5 Cores      | 10 GB       | Managed Kuma Data-Plane Proxy Workspace             |
 | **Integrated Ingress Gateway** | Kuma Gateway Mode (Envoy Edge Proxy)     | 1 Core       | 2 GB        | Edge Host Port Bindings & Path Translation Policies |
+| **Kubernetes Workload (MKRS)** | Container Workload Tier                  | 1 Core       | 2 GB        | Mesh-Routed Workload Services                       |
 | **Kuma SDN Control Plane**     | Universal Single-Container Control Plane | 1 Core       | 2 GB        | Centralized Multi-Mesh Virtual VPC Topology         |
 | **TOTAL ECOSYSTEM CEILING**    | **Elastic Platform Capacity Profile**    | **8 Cores**  | **16 GB**   | **Ansible-Orchestrated Software-Defined Network**   |
 

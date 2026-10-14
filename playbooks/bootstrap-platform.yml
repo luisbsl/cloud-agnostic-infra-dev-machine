@@ -9,8 +9,9 @@
     capacity_ceiling_ram_mb: 16384
     # Requested allocation per tier (matches scripts/profile-host.sh, 16 GB profile).
     platform_tiers:
-      - { name: "eccs-compute-nodes", cpu: 6, ram_mb: 12288 }
+      - { name: "eccs-compute-nodes", cpu: 5, ram_mb: 10240 }
       - { name: "calbs-cagis-ingress", cpu: 1, ram_mb: 2048 }
+      - { name: "mkrs-k8s-workload", cpu: 1, ram_mb: 2048 }
       - { name: "kuma-sdn-control-plane", cpu: 1, ram_mb: 2048 }
     requested_cpu: "{{ platform_tiers | map(attribute='cpu') | sum }}"
     requested_ram_mb: "{{ platform_tiers | map(attribute='ram_mb') | sum }}"
