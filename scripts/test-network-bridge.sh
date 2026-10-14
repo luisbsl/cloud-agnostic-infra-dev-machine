@@ -21,5 +21,11 @@ CMD="ansible-playbook $(basename "$TMP")/play.yml -e platform_network_name=$NET"
 RUN "$CMD" | grep -q "changed=1" || fail "first run did not create the network"
 [ "$(docker network inspect "$NET" --format '{{.Driver}}')" = "bridge" ] || fail "driver is not bridge"
 [ "$(docker network inspect "$NET" --format '{{index .Options "com.docker.network.driver.mtu"}}')" = "1500" ] || fail "MTU option is not 1500"
+label() { docker network inspect "$NET" --format "{{index .Labels \"$1\"}}"; }
+[ "$(label platform.simulation.isolated)" = "true" ] || fail "isolated label missing"
+STAMP="$(label platform.simulation.compiled.at)"
+[ -n "$STAMP" ] || fail "compiled.at label missing"
+sleep 2
 RUN "$CMD" | grep -q "changed=0" || fail "second run not idempotent"
-echo "[✓] network creation, MTU 1500 and idempotency passed"
+[ "$(label platform.simulation.compiled.at)" = "$STAMP" ] || fail "compiled.at label drifted"
+echo "[✓] network creation, MTU 1500, insulation labels and idempotency passed"

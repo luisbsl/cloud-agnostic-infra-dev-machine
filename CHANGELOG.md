@@ -1,11 +1,15 @@
-## [Unreleased] - 2026-10-13
+## [Unreleased] - 2026-10-14
 
 ### 🏆 Active Tracking Context: Milestone 02: Live Container Orchestration & Kuma SDN Fabric Integration
 
-  - ⚠️ No active user story markers discovered in this commit increment.
+#### Delivered User Stories:
+  - ✅ Story 1.1
 
 #### 🐛 Fixed
 - let bootstrap tests adapt to hosts below the full resource profile (bb6cb78)
+
+#### ⚙️ Infrastructure & Sandbox Control Plane
+- implement idempotent docker bridge network fabric and milestone-aware changelog compiler (M02 Epic 1 / Story 1.1) (8e0003a)
 
 ### 🏁 Completed Milestone: Milestone 01: Core Blueprint Schema, Render Pipeline & Ansible Orchestration Foundation
 
