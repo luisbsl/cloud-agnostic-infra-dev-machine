@@ -25,6 +25,21 @@
     quiet: true
   tags: [networking, compute]
 
+- name: Read container daemon capacity
+  community.docker.docker_host_info:
+  register: tier_daemon
+  tags: [compute]
+
+- name: Assert the daemon can honour every tier CPU cap
+  ansible.builtin.assert:
+    that: (tier_services | map(attribute='resources.cpu') | max) <= tier_daemon.host_info.NCPU | int
+    fail_msg: >-
+      Docker daemon exposes only {{ tier_daemon.host_info.NCPU }} CPUs but the blueprint requests up to
+      {{ tier_services | map(attribute='resources.cpu') | max }} for a single tier; Docker rejects caps above its CPU count.
+      Use a larger host/daemon or a smaller blueprint allocation.
+    quiet: true
+  tags: [compute]
+
 - name: Assert blueprint tiers plus the Kuma control plane fit the 8 vCPU / 16 GB ceiling
   ansible.builtin.assert:
     that:

@@ -25,8 +25,23 @@ cat > "$TMP/play.yml" <<'PLAY'
     - ansible.builtin.include_tasks: ../playbooks/tasks/provision-tiers.yml
 PLAY
 
-CMD="ansible-playbook $(basename "$TMP")/play.yml -e platform_network_name=$NET -e tier_name_prefix=$PFX"
-RUN "$CMD" >/dev/null || fail "first run failed"
+# Oversized CPU cap must halt before any container is created, with a descriptive error.
+jq --argjson n "$(docker info --format '{{.NCPU}}')" '.services[0].resources.cpu = ($n + 1)' blueprints/platform-services.json > "$TMP/oversized.json"
+OUT="$(RUN "ansible-playbook $(basename "$TMP")/play.yml -e platform_network_name=$NET -e tier_name_prefix=$PFX -e tier_blueprint_path=/workspace/$(basename "$TMP")/oversized.json" || true)"
+echo "$OUT" | grep -q "Docker daemon exposes only" || { echo "$OUT" >&2; fail "oversized CPU cap not rejected descriptively"; }
+[ -z "$(docker ps -aq --filter name="^/${PFX}")" ] || fail "containers created despite oversized cap"
+echo "[✓] oversized CPU cap halts with a descriptive error"
+
+# Clamp blueprint CPU caps to the daemon's CPU count so the test also runs on small CI runners
+# (Docker rejects caps above its CPU count). Real-blueprint sizing is enforced by validate-blueprint.sh.
+NCPU="$(docker info --format '{{.NCPU}}')"
+jq --argjson n "$NCPU" '.services |= map(.resources.cpu |= (if . > $n then $n else . end))' \
+    blueprints/platform-services.json > "$TMP/blueprint.json"
+exp_cpu() { jq -r --arg n "$1" '.services[] | select(.name == $n) | .resources.cpu' "$TMP/blueprint.json"; }
+exp_mem() { jq -r --arg n "$1" '.services[] | select(.name == $n) | .resources.ramGb * 1024' "$TMP/blueprint.json"; }
+
+CMD="ansible-playbook $(basename "$TMP")/play.yml -e platform_network_name=$NET -e tier_name_prefix=$PFX -e tier_blueprint_path=/workspace/$(basename "$TMP")/blueprint.json"
+OUT="$(RUN "$CMD")" || { echo "$OUT" >&2; fail "first run failed"; }
 
 check() { # name cpus mem_mb
     local c="${PFX}$1"
@@ -35,10 +50,9 @@ check() { # name cpus mem_mb
     [ "$(docker inspect "$c" --format '{{.HostConfig.NanoCpus}}')" = "$(($2 * 1000000000))" ] || fail "$1 cpu cap mismatch"
     [ "$(docker inspect "$c" --format '{{.HostConfig.Memory}}')" = "$(($3 * 1048576))" ] || fail "$1 memory cap mismatch"
 }
-check eccs-compute-nodes 5 10240
-check calbs-cagis-ingress 1 2048
-check mkrs-k8s-workload 1 2048
+for n in "${NAMES[@]}"; do check "$n" "$(exp_cpu "$n")" "$(exp_mem "$n")"; done
 [ "$(docker inspect "${PFX}calbs-cagis-ingress" --format '{{index .Config.Labels "kuma.io/gateway"}}')" = "enabled" ] || fail "blueprint tags not propagated as labels"
 
-RUN "$CMD" | grep -q "changed=0" || fail "second run not idempotent"
+OUT="$(RUN "$CMD")" || { echo "$OUT" >&2; fail "second run failed"; }
+echo "$OUT" | grep -q "changed=0" || { echo "$OUT" >&2; fail "second run not idempotent"; }
 echo "[✓] tier provisioning: 3 blueprint tiers running on the isolated network with caps, labels and idempotency passed"
