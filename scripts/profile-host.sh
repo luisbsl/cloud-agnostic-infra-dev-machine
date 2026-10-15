@@ -46,10 +46,12 @@ fi
 
 # Calculate Container Sizing Profile
 if [ "$SAFE_RAM" -ge 16 ]; then
-    TIER1_CPU=6
-    TIER1_RAM=12
+    TIER1_CPU=5
+    TIER1_RAM=10
     TIER23_CPU=1
     TIER23_RAM=2
+    TIER4_CPU=1
+    TIER4_RAM=2
     KUMA_CPU=1
     KUMA_RAM=2
 elif [ "$SAFE_RAM" -ge 8 ]; then
@@ -57,6 +59,8 @@ elif [ "$SAFE_RAM" -ge 8 ]; then
     TIER1_RAM=8
     TIER23_CPU=1
     TIER23_RAM=1
+    TIER4_CPU=1
+    TIER4_RAM=1
     KUMA_CPU=1
     KUMA_RAM=1
 else
@@ -64,17 +68,20 @@ else
     TIER1_RAM=4
     TIER23_CPU=1
     TIER23_RAM=1
+    TIER4_CPU=1
+    TIER4_RAM=1
     KUMA_CPU=1
     KUMA_RAM=1
 fi
 
-TOTAL_REQ_CPU=$(( TIER1_CPU + TIER23_CPU + KUMA_CPU ))
-TOTAL_REQ_RAM=$(( TIER1_RAM + TIER23_RAM + KUMA_RAM ))
+TOTAL_REQ_CPU=$(( TIER1_CPU + TIER23_CPU + TIER4_CPU + KUMA_CPU ))
+TOTAL_REQ_RAM=$(( TIER1_RAM + TIER23_RAM + TIER4_RAM + KUMA_RAM ))
 
 cat <<EOF
 [Container Platform Resource Allocation Matrix]
 * Computing Fabric (Tier 1 ECCS)      : ${TIER1_CPU} Cores, ${TIER1_RAM} GB RAM
 * Ingress Gateway (Tier 2 & 3 CALBS)  : ${TIER23_CPU} Core, ${TIER23_RAM} GB RAM
+* Workload Tier (Tier 4 MKRS)         : ${TIER4_CPU} Core, ${TIER4_RAM} GB RAM
 * Kuma SDN Control Plane             : ${KUMA_CPU} Core, ${KUMA_RAM} GB RAM
 
 [Aggregate Ecosystem Clamping Limit]

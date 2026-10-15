@@ -6,9 +6,11 @@
   - ✅ Story 1.1
   - ✅ Story 1.2
   - ✅ Story 2.1
+  - ✅ Story 2.2
 
 #### 🚀 Added
 - implement idempotent cgroup-clamped Kuma control plane allocation (M02 Epic 2 / Story 2.1) (494c9ac)
+- implement exponential-backoff Kuma control plane health guardrail (M02 Epic 2 / Story 2.2) (f0f6313)
 
 #### 🐛 Fixed
 - let bootstrap tests adapt to hosts below the full resource profile (bb6cb78)

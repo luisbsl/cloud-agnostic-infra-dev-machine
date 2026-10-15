@@ -95,3 +95,4 @@ jobs:
           bash scripts/test-network-bridge.sh
           bash scripts/test-kuma-cp-core.sh
           bash scripts/test-kuma-cp-health.sh
+          bash scripts/test-provision-tiers.sh
