@@ -8,6 +8,7 @@
   - ✅ Story 2.1
   - ✅ Story 2.2
   - ✅ Story 3.1
+  - ✅ Story 3.2
 
 #### 🚀 Added
 - implement idempotent cgroup-clamped Kuma control plane allocation (M02 Epic 2 / Story 2.1) (494c9ac)
@@ -21,6 +22,8 @@
 - implement idempotent docker bridge network fabric and milestone-aware changelog compiler (M02 Epic 1 / Story 1.1) (8e0003a)
 - inject dynamic insulation labels into platform network (M02 Epic 1 / Story 1.2) (75c1fa7)
 - blueprint-driven tier provisioning and 8 vCPU/16 GB-safe allocation (M02 Epic 3 / Story 3.1) (9a415ef)
+- enforce exact cgroup capacity clamping per tier (M02 Epic 3 / Story 3.2) (635e35b)
+- add versioned pre-commit guard blocking direct commits to main/develop (a6ed7db)
 
 ### 🏁 Completed Milestone: Milestone 01: Core Blueprint Schema, Render Pipeline & Ansible Orchestration Foundation
 
