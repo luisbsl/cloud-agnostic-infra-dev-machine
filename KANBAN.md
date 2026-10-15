@@ -1,7 +1,7 @@
 # 📋 Copilot AI-Driven Dynamic Kanban Board
 
 **Active Focus Boundary:** Milestone 02: Live Container Orchestration & Kuma SDN Fabric Integration
-**Last Matrix Compilation:** 2026-10-14 18:42:06
+**Last Matrix Compilation:** 2026-10-15 08:27:47
 
 <details><summary>🏁 Milestone 01: Core Blueprint Schema, Render Pipeline & Ansible Orchestration Foundation — Completed</summary>
 
@@ -28,6 +28,6 @@
 | | | **Epic 2**: **Story 2.1**: Implement an idempotent container allocation blueprint targeting `kuma-control-plane` using pinned components (`docker.io/kong/kuma-cp:2.9.1`). |
 | | | **Epic 2**: **Story 2.2**: Build a robust `ansible.builtin.uri` validation loop that queries the API endpoint `http://localhost:5681/meshes` with an exponential backoff retry mechanism (Max 10 attempts). |
 | | | **Epic 3**: **Story 3.1**: Implement loop routines that parse `blueprints/platform-services.json` to spawn active infrastructure workloads (`eccs-compute-nodes`, `calbs-cagis-ingress`, `mkrs-k8s-workload`). |
-| **Epic 3**: **Story 3.2**: Explicitly map cgroup capacity caps (`cpus`, `memory_limit`) directly into the docker runtime configs to protect developer machine stability. | | |
+| **Epic 3**: **Story 3.2**: Explicitly map cgroup capacity caps (`cpus`, `memory_limit`) directly into the docker runtime configs to protect developer machine stability. Caps are `eccs-compute-nodes` 5 CPU / 10240 MB, `calbs-cagis-ingress` 1 CPU / 2048 MB and `mkrs-k8s-workload` 1 CPU / 2048 MB; with the Kuma control plane (1 CPU / 2048 MB) the stack totals exactly 8 vCPU / 16 GB. | | |
 | **Epic 4**: **Story 4.1**: Update the active platform validation suite to parse and assert Kuma Dataplane data structures on-the-fly via the live control plane catalog. | | |
 | **Epic 4**: **Story 4.2**: Integrate a test assertion block to verify zero-trust path isolation between unauthenticated zones. | | |
