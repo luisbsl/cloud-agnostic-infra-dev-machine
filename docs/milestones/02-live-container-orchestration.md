@@ -55,6 +55,7 @@ graph TD
 - **Story 4.1:** Update the active platform validation suite to parse and assert Kuma Dataplane data structures on-the-fly via the live control plane catalog.
   Implemented by `playbooks/tasks/validate-mesh-catalog.yml` (included from `validate-platform.yml`): GET `/meshes/platform-simulation-vpc/dataplanes`, then assert each blueprint tier is registered and its `kuma.io/service` token matches `blueprints/platform-services.json`. A real run needs the sandbox on the host network to reach `localhost:5681`; override with `-e kuma_api_url=...`. Covered by `scripts/test-validate-mesh-catalog.sh`.
 - **Story 4.2:** Integrate a test assertion block to verify zero-trust path isolation between unauthenticated zones.
+  Implemented by `playbooks/tasks/validate-path-isolation.yml` (included from `validate-platform.yml`): asserts the mesh enforces an mTLS backend with no allow-all `TrafficPermission`, then probes `calbs-cagis-ingress` -> `mkrs-k8s-workload` over plaintext (`nc`, default port 8080, override `isolation_target_port`) and requires the connection to be rejected. The play ends with a summary task reached only when every check passed. Covered by `scripts/test-validate-path-isolation.sh`.
 - **Acceptance Criteria:** Executing `ansible-playbook playbooks/validate-platform.yml` successfully completes all validation checks with zero task failures.
 
 ---

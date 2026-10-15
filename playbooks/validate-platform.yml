@@ -58,3 +58,12 @@
 
     - name: 🧭 Validate live Kuma Dataplane catalog against blueprint service tokens
       ansible.builtin.include_tasks: tasks/validate-mesh-catalog.yml
+
+    - name: 🚫 Validate zero-trust path isolation (deny-all, non-mTLS rejected)
+      ansible.builtin.include_tasks: tasks/validate-path-isolation.yml
+
+    - name: 🏁 Final validation summary
+      ansible.builtin.debug:
+        msg: >-
+          Validation summary: mesh={{ target_mesh }} tiers={{ expected_containers | length }}
+          failures=0 (any failed check above halts the play before this task).
