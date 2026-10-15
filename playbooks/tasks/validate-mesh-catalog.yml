@@ -1,6 +1,6 @@
 ---
 # Story 4.1: queries the live Kuma Dataplane catalog and asserts every blueprint tier is registered with its
-# kuma.io/service token. Inputs: kuma_api_url, target_mesh, expected_containers (blueprint services), require_provisioned.
+# kuma.io/service token (inbound or delegated-gateway tags). Inputs: kuma_api_url, target_mesh, expected_containers (blueprint services), require_provisioned.
 - name: 📚 Fetch live Dataplane catalog from the Kuma control plane
   ansible.builtin.uri:
     url: "{{ kuma_api_url }}/meshes/{{ target_mesh }}/dataplanes"
@@ -37,7 +37,9 @@
   vars:
     registered: "{{ catalog_items | selectattr('name', 'equalto', item.name) | list }}"
     tokens: >-
-      {{ (registered | first).networking.inbound | default([]) | map(attribute='tags') | map('dict2items') | flatten
+      {{ ((registered | first).networking.inbound | default([]) | map(attribute='tags') | list
+           + [(registered | first).networking.gateway.tags | default({})])
+         | map('dict2items') | flatten
          | selectattr('key', 'equalto', 'kuma.io/service') | map(attribute='value') | unique | list
          if registered | length == 1 else [] }}
   loop: "{{ expected_containers }}"

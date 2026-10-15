@@ -56,7 +56,7 @@ catalog() { # <eccs-token> <include-mkrs: yes|no>
     cat > "$TMP/catalog.json" <<JSON
 {"total":3,"items":[
 {"name":"eccs-compute-nodes","mesh":"platform-simulation-vpc","networking":{"inbound":[{"tags":{"kuma.io/service":"$1","tier":"tier-1-eccs"}}]}},
-{"name":"calbs-cagis-ingress","mesh":"platform-simulation-vpc","networking":{"inbound":[{"tags":{"kuma.io/service":"ingress-gateway-svc","kuma.io/gateway":"enabled"}}]}}
+{"name":"calbs-cagis-ingress","mesh":"platform-simulation-vpc","networking":{"gateway":{"type":"DELEGATED","tags":{"kuma.io/service":"ingress-gateway-svc","kuma.io/gateway":"enabled"}}}}
 $mkrs]}
 JSON
 }
