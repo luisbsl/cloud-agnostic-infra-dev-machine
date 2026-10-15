@@ -44,7 +44,7 @@ graph TD
 **Deliverables:** `playbooks/tasks/provision-tiers.yml`
 
 - **Story 3.1:** Implement loop routines that parse `blueprints/platform-services.json` to spawn active infrastructure workloads (`eccs-compute-nodes`, `calbs-cagis-ingress`, `mkrs-k8s-workload`).
-- **Story 3.2:** Explicitly map cgroup capacity caps (`cpus`, `memory_limit`) directly into the docker runtime configs to protect developer machine stability.
+- **Story 3.2:** Explicitly map cgroup capacity caps (`cpus`, `memory_limit`) directly into the docker runtime configs to protect developer machine stability. Caps are `eccs-compute-nodes` 5 CPU / 10240 MB, `calbs-cagis-ingress` 1 CPU / 2048 MB and `mkrs-k8s-workload` 1 CPU / 2048 MB; with the Kuma control plane (1 CPU / 2048 MB) the stack totals exactly 8 vCPU / 16 GB.
 - **Acceptance Criteria:** All containers report a state of `running` and match their allocated resource constraints exactly.
 
 ### Epic 4: Live Mesh Routing E2E Verification
