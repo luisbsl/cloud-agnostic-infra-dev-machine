@@ -1,0 +1,100 @@
+---
+# Story 4.2: zero-trust path isolation. Asserts (1) the mesh enforces mTLS with no allow-all TrafficPermission and
+# (2) a plaintext, non-mTLS connection from the ingress tier to the workload tier is rejected.
+# Inputs: kuma_api_url, target_mesh, require_provisioned.
+# Overridable: isolation_source, isolation_target, isolation_target_port, isolation_probe_timeout, platform_network_name.
+- name: 🔐 Read mesh mTLS configuration
+  ansible.builtin.uri:
+    url: "{{ kuma_api_url }}/meshes/{{ target_mesh }}"
+    method: GET
+    return_content: true
+    status_code: 200
+  register: isolation_mesh
+  ignore_errors: true
+  check_mode: false
+
+- name: 🔐 Read mesh TrafficPermission policies
+  ansible.builtin.uri:
+    url: "{{ kuma_api_url }}/meshes/{{ target_mesh }}/traffic-permissions"
+    method: GET
+    return_content: true
+    status_code: [200, 404]
+  register: isolation_permissions
+  ignore_errors: true
+  check_mode: false
+
+- name: 🔐 Collect allow-all TrafficPermission names
+  ansible.builtin.set_fact:
+    allow_all: >-
+      {% set ns = namespace(r=[]) %}
+      {% for p in (isolation_permissions.json | default({})).get('items', []) if isolation_permissions.status | default(0) == 200 %}
+      {% if (p.sources | default([{}]))[0].get('match', {}).get('kuma.io/service', '') == '*'
+            and (p.destinations | default([{}]))[0].get('match', {}).get('kuma.io/service', '') == '*' %}
+      {% set ns.r = ns.r + [p.name] %}
+      {% endif %}
+      {% endfor %}
+      {{ ns.r | to_json }}
+
+- name: 🛡️ Assert mTLS is enforced and no allow-all permission exists
+  ansible.builtin.assert:
+    that:
+      - not (require_provisioned | bool) or isolation_mesh.status | default(0) == 200
+      - not (require_provisioned | bool) or (mtls.enabledBackend | default('') | length > 0)
+      - not (require_provisioned | bool) or allow_all_names | length == 0
+    fail_msg: >-
+      Fatal: mesh {{ target_mesh }} does not enforce zero-trust
+      ({{ 'API unreachable' if isolation_mesh.status | default(0) != 200 else
+          'mTLS disabled' if mtls.enabledBackend | default('') | length == 0 else
+          'allow-all TrafficPermission present: ' ~ (allow_all_names | join(', ')) }}).
+    success_msg: >-
+      {{ 'Verified mTLS backend ' ~ mtls.enabledBackend ~ ' enforced and no allow-all TrafficPermission in ' ~ target_mesh
+         if isolation_mesh.status | default(0) == 200 else
+         'Audited mesh ' ~ target_mesh ~ ' zero-trust policy: not reachable yet (tolerated in check mode).' }}
+  vars:
+    mtls: "{{ (isolation_mesh.json | default({})).get('mtls', {}) }}"
+    allow_all_names: "{{ allow_all | from_json if allow_all is string else allow_all }}"
+
+- name: 🔎 Inspect probe source and target tiers
+  community.docker.docker_container_info:
+    name: "{{ item }}"
+  loop:
+    - "{{ isolation_source | default('calbs-cagis-ingress') }}"
+    - "{{ isolation_target | default('mkrs-k8s-workload') }}"
+  register: isolation_tiers
+
+- name: 🛡️ Assert probe tiers are running
+  ansible.builtin.assert:
+    that:
+      - not (require_provisioned | bool) or item.exists
+      - not item.exists or item.container.State.Running
+    fail_msg: "Fatal: tier {{ item.item }} must be running for the path isolation probe."
+    quiet: true
+  loop: "{{ isolation_tiers.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: 🚧 Attempt unauthenticated plaintext connection ingress -> workload
+  community.docker.docker_container_exec:
+    container: "{{ isolation_source | default('calbs-cagis-ingress') }}"
+    command: >-
+      nc -z -w {{ isolation_probe_timeout | default(3) }}
+      {{ isolation_tiers.results[1].container.NetworkSettings.Networks[platform_network_name | default('platform-simulation-net')].IPAddress }}
+      {{ isolation_target_port | default(8080) }}
+  register: isolation_probe
+  failed_when: false
+  changed_when: false
+  when: isolation_tiers.results | map(attribute='exists') | min
+
+- name: 🛡️ Assert direct non-mTLS cross-tier traffic is rejected
+  ansible.builtin.assert:
+    that:
+      - isolation_probe is skipped or isolation_probe.rc | default(-1) == 1
+    fail_msg: >-
+      Fatal: plaintext traffic {{ isolation_source | default('calbs-cagis-ingress') }} ->
+      {{ isolation_target | default('mkrs-k8s-workload') }}:{{ isolation_target_port | default(8080) }} was not rejected
+      (probe rc={{ isolation_probe.rc | default('n/a') }}; expected 1 = connection refused or dropped).
+    success_msg: >-
+      {{ 'Verified plaintext ' ~ (isolation_source | default('calbs-cagis-ingress')) ~ ' -> '
+         ~ (isolation_target | default('mkrs-k8s-workload')) ~ ' rejected (non-mTLS path blocked).'
+         if isolation_probe is not skipped else
+         'Audited path isolation probe: tiers not provisioned yet (tolerated in check mode).' }}

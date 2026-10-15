@@ -95,6 +95,7 @@ jobs:
           bash scripts/test-bootstrap-platform.sh
           bash scripts/test-validate-platform.sh
           bash scripts/test-validate-mesh-catalog.sh
+          bash scripts/test-validate-path-isolation.sh
           bash scripts/test-teardown-platform.sh
           bash scripts/test-network-bridge.sh
           bash scripts/test-kuma-cp-core.sh
