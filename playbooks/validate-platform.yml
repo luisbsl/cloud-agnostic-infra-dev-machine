@@ -4,14 +4,15 @@
   connection: local
   gather_facts: false
   vars:
-    target_mesh: "platform-simulation-vpc"
+    blueprint_path: "{{ playbook_dir }}/../blueprints/platform-services.json"
+    blueprint: "{{ lookup('ansible.builtin.file', blueprint_path) | from_json }}"
+    target_mesh: "{{ blueprint.mesh }}"
     kuma_api_port: 5681
+    kuma_api_url: "http://localhost:{{ kuma_api_port }}"
     # Nodes and the mesh may not be provisioned yet; only --check tolerates absence, a real run requires them.
     require_provisioned: "{{ not ansible_check_mode }}"
-    expected_containers:
-      - { name: "eccs-compute-nodes", service: "eccs-compute-svc" }
-      - { name: "calbs-cagis-ingress", service: "ingress-gateway-svc" }
-      - { name: "mkrs-k8s-workload", service: "mkrs-workload-svc" }
+    # The blueprint is the single source of truth for tiers and their kuma.io/service tokens.
+    expected_containers: "{{ blueprint.services }}"
 
   tasks:
     - name: 🔍 Audit Active Container Execution Boundaries
@@ -38,7 +39,7 @@
 
     - name: 🌐 Query Kuma SDN Control Plane Multi-Mesh Fabric Status
       ansible.builtin.uri:
-        url: "http://localhost:{{ kuma_api_port }}/meshes/{{ target_mesh }}"
+        url: "{{ kuma_api_url }}/meshes/{{ target_mesh }}"
         method: GET
         status_code: 200
       register: sdn_status
@@ -54,3 +55,6 @@
           {{ 'Success: Multi-tenant isolated Virtual VPC Mesh detected and active.'
              if sdn_status.status | default(0) == 200 else
              'Audited Kuma SDN mesh ' ~ target_mesh ~ ': not reachable yet (tolerated in check mode).' }}
+
+    - name: 🧭 Validate live Kuma Dataplane catalog against blueprint service tokens
+      ansible.builtin.include_tasks: tasks/validate-mesh-catalog.yml
