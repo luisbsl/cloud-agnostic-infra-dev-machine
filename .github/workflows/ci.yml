@@ -61,6 +61,9 @@ jobs:
       - name: Test milestone-aware changelog and Kanban compiler
         run: bash scripts/test-compile-changelog.sh
 
+      - name: Test protected-branch Git hooks
+        run: bash scripts/test-git-hooks.sh
+
       - name: Validate Ansible requirements definition
         run: |
           REQ_FILE="playbooks/requirements.yml"
