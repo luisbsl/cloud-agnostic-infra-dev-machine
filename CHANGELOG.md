@@ -1,4 +1,4 @@
-## [Unreleased] - 2026-10-14
+## [Unreleased] - 2026-10-15
 
 ### 🏆 Active Tracking Context: Milestone 02: Live Container Orchestration & Kuma SDN Fabric Integration
 
@@ -7,6 +7,7 @@
   - ✅ Story 1.2
   - ✅ Story 2.1
   - ✅ Story 2.2
+  - ✅ Story 3.1
 
 #### 🚀 Added
 - implement idempotent cgroup-clamped Kuma control plane allocation (M02 Epic 2 / Story 2.1) (494c9ac)
@@ -14,10 +15,12 @@
 
 #### 🐛 Fixed
 - let bootstrap tests adapt to hosts below the full resource profile (bb6cb78)
+- make tier provisioning test and task robust on CI runners with fewer CPUs (M02 Epic 3 / Story 3.1) (eb3caa1)
 
 #### ⚙️ Infrastructure & Sandbox Control Plane
 - implement idempotent docker bridge network fabric and milestone-aware changelog compiler (M02 Epic 1 / Story 1.1) (8e0003a)
 - inject dynamic insulation labels into platform network (M02 Epic 1 / Story 1.2) (75c1fa7)
+- blueprint-driven tier provisioning and 8 vCPU/16 GB-safe allocation (M02 Epic 3 / Story 3.1) (9a415ef)
 
 ### 🏁 Completed Milestone: Milestone 01: Core Blueprint Schema, Render Pipeline & Ansible Orchestration Foundation
 

@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Covers local merge commits on protected branches, which pre-commit does not run for.
+exec "$(dirname "$0")/_guard.sh"
