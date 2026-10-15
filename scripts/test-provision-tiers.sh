@@ -25,6 +25,15 @@ cat > "$TMP/play.yml" <<'PLAY'
     - ansible.builtin.include_tasks: ../playbooks/tasks/provision-tiers.yml
 PLAY
 
+# Blueprint contract (unclamped): the declared per-tier caps and the aggregate ceiling.
+bp() { jq -r --arg n "$1" '.services[] | select(.name == $n) | "\(.resources.cpu) \(.resources.ramGb * 1024)"' blueprints/platform-services.json; }
+[ "$(bp eccs-compute-nodes)" = "5 10240" ] || fail "eccs-compute-nodes blueprint caps are not 5 CPU / 10240 MB"
+[ "$(bp calbs-cagis-ingress)" = "1 2048" ] || fail "calbs-cagis-ingress blueprint caps are not 1 CPU / 2048 MB"
+[ "$(bp mkrs-k8s-workload)" = "1 2048" ] || fail "mkrs-k8s-workload blueprint caps are not 1 CPU / 2048 MB"
+jq -e '([.services[].resources.cpu] | add) + 1 <= 8 and ([.services[].resources.ramGb] | add) * 1024 + 2048 <= 16384' \
+    blueprints/platform-services.json >/dev/null || fail "blueprint plus Kuma exceeds the 8 vCPU / 16 GB ceiling"
+echo "[✓] blueprint caps and aggregate ceiling verified"
+
 # Oversized CPU cap must halt before any container is created, with a descriptive error.
 jq --argjson n "$(docker info --format '{{.NCPU}}')" '.services[0].resources.cpu = ($n + 1)' blueprints/platform-services.json > "$TMP/oversized.json"
 OUT="$(RUN "ansible-playbook $(basename "$TMP")/play.yml -e platform_network_name=$NET -e tier_name_prefix=$PFX -e tier_blueprint_path=/workspace/$(basename "$TMP")/oversized.json" || true)"
@@ -53,6 +62,10 @@ check() { # name cpus mem_mb
 for n in "${NAMES[@]}"; do check "$n" "$(exp_cpu "$n")" "$(exp_mem "$n")"; done
 [ "$(docker inspect "${PFX}calbs-cagis-ingress" --format '{{index .Config.Labels "kuma.io/gateway"}}')" = "enabled" ] || fail "blueprint tags not propagated as labels"
 
+docker update --memory 4096m --memory-swap 4096m "${PFX}mkrs-k8s-workload" >/dev/null
+OUT="$(RUN "$CMD")" || { echo "$OUT" >&2; fail "drift-repair run failed"; }
+check mkrs-k8s-workload "$(exp_cpu mkrs-k8s-workload)" "$(exp_mem mkrs-k8s-workload)"
+echo "[✓] tampered cgroup cap restored to the blueprint value"
 OUT="$(RUN "$CMD")" || { echo "$OUT" >&2; fail "second run failed"; }
 echo "$OUT" | grep -q "changed=0" || { echo "$OUT" >&2; fail "second run not idempotent"; }
 echo "[✓] tier provisioning: 3 blueprint tiers running on the isolated network with caps, labels and idempotency passed"

@@ -89,3 +89,19 @@
   loop_control:
     label: "{{ item.item.name }}"
   tags: [compute]
+
+- name: Assert cgroup caps match the blueprint exactly
+  ansible.builtin.assert:
+    that:
+      - item.container.HostConfig.NanoCpus | int == (item.item.resources.cpu | int) * 1000000000
+      - item.container.HostConfig.Memory | int == (item.item.resources.ramGb | int) * 1024 * 1048576
+    fail_msg: >-
+      Tier {{ item.item.name }} cgroup caps drifted from the blueprint
+      (expected {{ item.item.resources.cpu }} CPU / {{ item.item.resources.ramGb | int * 1024 }} MB,
+      found {{ item.container.HostConfig.NanoCpus | int / 1000000000 }} CPU /
+      {{ item.container.HostConfig.Memory | int / 1048576 }} MB).
+    quiet: true
+  loop: "{{ tier_state.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  tags: [compute]
