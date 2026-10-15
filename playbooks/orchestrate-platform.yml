@@ -1,0 +1,18 @@
+---
+# Single entry point for Milestone 02: network fabric -> Kuma control plane -> health gate -> tier workloads ->
+# zero-trust mesh with registered Dataplanes. Idempotent; validate with playbooks/validate-platform.yml.
+- name: Live container orchestration and Kuma SDN fabric
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Isolated SDN bridge network
+      ansible.builtin.include_tasks: tasks/network-bridge.yml
+    - name: Kuma control plane
+      ansible.builtin.include_tasks: tasks/kuma-cp-core.yml
+    - name: Block until the Kuma API answers HTTP 200
+      ansible.builtin.include_tasks: tasks/kuma-cp-health.yml
+    - name: Blueprint tier workloads with cgroup caps
+      ansible.builtin.include_tasks: tasks/provision-tiers.yml
+    - name: Zero-trust mesh and Dataplane registration
+      ansible.builtin.include_tasks: tasks/mesh-bootstrap.yml
