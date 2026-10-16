@@ -2,15 +2,16 @@
 
 ## 1. Local Machine Dependency & Pre-Flight Validation
 
-Auditing host readiness is integrated into the validation suite. Ensure the workstation satisfies all prerequisites detailed in [Software Requirements & Dependency Mapping Matrix](03-dependencies.md):
+Auditing host readiness, collection validation, and multi-tier network path verification is aggregated inside our continuous matrix orchestration suite. Developers are prohibited from executing isolated component test blocks manually prior to pull request compilation.
+
+The entire 14-script matrix must be run synchronously through the sandbox container:
 
 ```bash
-# Audits missing software dependencies and version bounds
-bash scripts/check-requirements.sh
-
-# Verifies Ansible collection requirement resolutions in isolation
-sh scripts/test-requirements.sh
+# Triggers linting, unit testing, and live zero-trust mesh microsegmentation checks
+bash scripts/sandbox-run.sh "bash scripts/run-ci-pipeline.sh --all"
 ```
+
+If an error is intercepted inside the execution chain, the pipeline engine automatically handles the crash recovery protocol, spawning `playbooks/teardown-platform.yml` to return workstation resource utilization securely to zero.
 
 ## 2. Triggering Remote Validation Tests via GitHub CLI
 

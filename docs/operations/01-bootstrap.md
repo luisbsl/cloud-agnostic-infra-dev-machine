@@ -32,16 +32,14 @@ To assert Gitflow branch barriers securely without clicking through web panels o
 bash scripts/sandbox-run.sh "gh api --method POST -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' /repos/luisbsl/cloud-agnostic-infra-dev-machine/rulesets --input docs/compiled-manifests/governance/protect-gitflow.json"
 ```
 
-## 4. Target Component Execution via Task Tags
+## 4. Target Component Execution via Pipeline Stages
 
-If modifying specific elements of the infrastructure, developers can leverage task tagging patterns inside the sandbox wrapper to narrow execution scopes safely:
+If modifying specific elements of the infrastructure, developers must leverage the declarative pipeline orchestrator inside the sandbox wrapper to narrow execution scopes safely:
 
 ```bash
-# Execute ONLY the "render" compilation step inside the container to evaluate manifests
-bash scripts/sandbox-run.sh "ansible-playbook playbooks/bootstrap-platform.yml --tags 'render'"
+# Execute ONLY the "lint" stage to evaluate JSON blueprints and collection syntax rules
+bash scripts/sandbox-run.sh "bash scripts/run-ci-pipeline.sh --stage lint"
 
-# Execute ONLY the GitHub repository ruleset configuration task blocks
-bash scripts/sandbox-run.sh "ansible-playbook playbooks/bootstrap-platform.yml --tags 'github-setup'"
+# Execute ONLY core unit tests to check cgroup calculations and log parser splitting
+bash scripts/sandbox-run.sh "bash scripts/run-ci-pipeline.sh --stage unit"
 ```
-
-When execution terminates, the container runtime layer auto-destructs via the `--rm` flag, scaling compute and memory draw back to absolute zero.
