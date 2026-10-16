@@ -190,6 +190,28 @@ gh run view RUN_ID --log-failed
 Replace `RUN_ID` with the workflow run ID. For branch protection, select the
 check produced by `Repository validation` after its first successful run.
 
+## Local protected-branch guard
+
+Versioned hooks in `.githooks/` reject commits and merge commits made directly
+on `main` or `develop` (fast-forward pulls, topic branches and detached HEAD
+such as during a rebase are unaffected). Activate them once per clone:
+
+```bash
+bash scripts/install-git-hooks.sh
+```
+
+If a commit was already made on `develop` by mistake and not pushed, move it to
+a topic branch and reset `develop` to the remote:
+
+```bash
+git switch -c infra/<topic>
+git branch -f develop origin/develop
+```
+
+`ALLOW_PROTECTED_BRANCH_COMMIT=1` bypasses the guard for emergencies only.
+Server-side branch protection remains the authoritative control; the hooks give
+earlier feedback and are verified by `bash scripts/test-git-hooks.sh` in CI.
+
 ## Recovery
 
 - If checks fail, inspect the failed step with

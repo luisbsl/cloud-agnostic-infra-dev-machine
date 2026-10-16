@@ -1,0 +1,46 @@
+---
+# Idempotent isolated bridge fabric with insulation labels. Include from a play targeting localhost.
+# Overridable: platform_network_name, platform_network_mtu.
+# Docker labels are immutable after creation, so the compile timestamp is reused from an existing
+# network and only generated on first creation; this keeps repeated runs at changed=0.
+- name: Inspect existing platform simulation network
+  community.docker.docker_network_info:
+    name: "{{ platform_network_name | default('platform-simulation-net') }}"
+  register: platform_network_existing
+  tags: [networking]
+
+- name: Resolve stable compile timestamp label
+  ansible.builtin.set_fact:
+    platform_network_compiled_at: >-
+      {{ (platform_network_existing.network.Labels | default({}, true)
+          if platform_network_existing.exists else {})
+         .get('platform.simulation.compiled.at', lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ')) }}
+  tags: [networking]
+
+- name: Provision isolated platform simulation bridge network
+  community.docker.docker_network:
+    name: "{{ platform_network_name | default('platform-simulation-net') }}"
+    driver: bridge
+    driver_options:
+      com.docker.network.driver.mtu: "{{ platform_network_mtu | default('1500') | string }}"
+    labels:
+      platform.simulation.isolated: "true"
+      platform.simulation.compiled.at: "{{ platform_network_compiled_at }}"
+    state: present
+  tags: [networking]
+
+- name: Verify insulation labels via network inspection
+  community.docker.docker_network_info:
+    name: "{{ platform_network_name | default('platform-simulation-net') }}"
+  register: platform_network_verified
+  changed_when: false
+  tags: [networking]
+
+- name: Assert insulation labels are intact
+  ansible.builtin.assert:
+    that:
+      - platform_network_verified.exists
+      - platform_network_verified.network.Labels['platform.simulation.isolated'] == 'true'
+      - platform_network_verified.network.Labels['platform.simulation.compiled.at'] | length > 0
+    quiet: true
+  tags: [networking]

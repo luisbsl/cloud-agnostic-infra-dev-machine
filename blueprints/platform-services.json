@@ -5,7 +5,7 @@
     {
       "name": "eccs-compute-nodes",
       "tier": "tier-1-eccs",
-      "resources": { "cpu": 6, "ramGb": 12 },
+      "resources": { "cpu": 5, "ramGb": 10 },
       "tags": {
         "mesh": "platform-simulation-vpc",
         "kuma.io/service": "eccs-compute-svc"

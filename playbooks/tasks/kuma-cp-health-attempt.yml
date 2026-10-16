@@ -1,0 +1,49 @@
+---
+# Single probe attempt; re-includes itself with an increased attempt counter until success or the ceiling.
+- name: "Query Kuma API (attempt {{ kuma_cp_health_attempt }}/{{ kuma_cp_health_max_attempts | default(10) }})"
+  ansible.builtin.uri:
+    url: "{{ kuma_cp_api_url | default('http://localhost:5681/meshes') }}"
+    method: GET
+    status_code: 200
+    timeout: 5
+  register: kuma_cp_health_probe
+  failed_when: false
+  changed_when: false
+  check_mode: false
+  tags: [compute, health]
+
+- name: Confirm Kuma control plane readiness
+  ansible.builtin.debug:
+    msg: "Kuma control plane ready after {{ kuma_cp_health_attempt }} attempt(s)."
+  when: kuma_cp_health_probe.status | default(-1) == 200
+  tags: [compute, health]
+
+- name: Halt when the retry ceiling is reached
+  ansible.builtin.fail:
+    msg: >-
+      Kuma control plane did not return HTTP 200 from
+      {{ kuma_cp_api_url | default('http://localhost:5681/meshes') }} after
+      {{ kuma_cp_health_max_attempts | default(10) }} attempts
+      (last status: {{ kuma_cp_health_probe.status | default('no response') }}).
+      Check the kuma-control-plane container and its 127.0.0.1:5681 port binding.
+  when:
+    - kuma_cp_health_probe.status | default(-1) != 200
+    - kuma_cp_health_attempt | int >= kuma_cp_health_max_attempts | default(10) | int
+  tags: [compute, health]
+
+- name: Back off before the next attempt
+  ansible.builtin.wait_for:
+    timeout: "{{ [(kuma_cp_health_base_delay | default(1) | int) * (2 ** (kuma_cp_health_attempt | int - 1)), kuma_cp_health_max_delay | default(30) | int] | min }}"
+  when: kuma_cp_health_probe.status | default(-1) != 200
+  tags: [compute, health]
+
+- name: Advance attempt counter and retry
+  ansible.builtin.set_fact:
+    kuma_cp_health_attempt: "{{ kuma_cp_health_attempt | int + 1 }}"
+  when: kuma_cp_health_probe.status | default(-1) != 200
+  tags: [compute, health]
+
+- name: Re-probe
+  ansible.builtin.include_tasks: kuma-cp-health-attempt.yml
+  when: kuma_cp_health_probe.status | default(-1) != 200
+  tags: [compute, health]

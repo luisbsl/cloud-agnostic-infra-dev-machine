@@ -1,0 +1,34 @@
+---
+# Idempotent, cgroup-clamped Kuma control plane. Requires the bridge from network-bridge.yml.
+# Overridable: kuma_cp_name, kuma_cp_image, kuma_cp_cpus, kuma_cp_memory_mb, kuma_cp_host_port, platform_network_name.
+- name: Inspect target network for Kuma control plane
+  community.docker.docker_network_info:
+    name: "{{ platform_network_name | default('platform-simulation-net') }}"
+  register: kuma_cp_network
+  tags: [networking, compute]
+
+- name: Assert isolated bridge network is operational
+  ansible.builtin.assert:
+    that: kuma_cp_network.exists
+    fail_msg: "Network {{ platform_network_name | default('platform-simulation-net') }} is missing; run tasks/network-bridge.yml first."
+    quiet: true
+  tags: [networking, compute]
+
+- name: Allocate pinned Kuma control plane container
+  community.docker.docker_container:
+    name: "{{ kuma_cp_name | default('kuma-control-plane') }}"
+    image: "{{ kuma_cp_image | default('docker.io/kong/kuma-cp:2.9.1') }}"
+    state: started
+    restart_policy: unless-stopped
+    cpus: "{{ kuma_cp_cpus | default(1) }}"
+    memory: "{{ kuma_cp_memory_mb | default(2048) }}M"
+    networks:
+      - name: "{{ platform_network_name | default('platform-simulation-net') }}"
+    network_mode: "{{ platform_network_name | default('platform-simulation-net') }}"
+    published_ports:
+      - "127.0.0.1:{{ kuma_cp_host_port | default(5681) }}:5681"
+    env:
+      KUMA_ENVIRONMENT: universal
+      KUMA_STORE_TYPE: memory
+    command: ["run"]
+  tags: [compute]

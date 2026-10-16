@@ -1,0 +1,47 @@
+---
+# Story 4.1: queries the live Kuma Dataplane catalog and asserts every blueprint tier is registered with its
+# kuma.io/service token (inbound or delegated-gateway tags). Inputs: kuma_api_url, target_mesh, expected_containers (blueprint services), require_provisioned.
+- name: 📚 Fetch live Dataplane catalog from the Kuma control plane
+  ansible.builtin.uri:
+    url: "{{ kuma_api_url }}/meshes/{{ target_mesh }}/dataplanes"
+    method: GET
+    return_content: true
+    status_code: 200
+  register: dataplane_catalog
+  ignore_errors: true
+  check_mode: false
+
+- name: 🧮 Index registered Dataplanes by name
+  ansible.builtin.set_fact:
+    catalog_items: "{{ (dataplane_catalog.json | default({})).get('items', []) }}"
+
+- name: 🛡️ Assert catalog is reachable
+  ansible.builtin.assert:
+    that:
+      - not (require_provisioned | bool) or dataplane_catalog.status | default(0) == 200
+    fail_msg: "Fatal: Kuma Dataplane catalog {{ kuma_api_url }}/meshes/{{ target_mesh }}/dataplanes is unreachable!"
+    quiet: true
+
+- name: 🛡️ Assert each tier is registered with a matching kuma.io/service token
+  ansible.builtin.assert:
+    that:
+      - not (require_provisioned | bool) or registered | length == 1
+      - not (require_provisioned | bool) or tokens == [item.tags['kuma.io/service']]
+    fail_msg: >-
+      Fatal: Dataplane {{ item.name }} {{ 'is not registered in mesh ' ~ target_mesh if registered | length != 1 else
+      'exposes kuma.io/service ' ~ tokens ~ ', blueprint expects ' ~ item.tags['kuma.io/service'] }}
+    success_msg: >-
+      {{ 'Verified Dataplane ' ~ item.name ~ ' -> ' ~ item.tags['kuma.io/service']
+         if registered | length == 1 else
+         'Audited Dataplane ' ~ item.name ~ ': not registered yet (tolerated in check mode).' }}
+  vars:
+    registered: "{{ catalog_items | selectattr('name', 'equalto', item.name) | list }}"
+    tokens: >-
+      {{ ((registered | first).networking.inbound | default([]) | map(attribute='tags') | list
+           + [(registered | first).networking.gateway.tags | default({})])
+         | map('dict2items') | flatten
+         | selectattr('key', 'equalto', 'kuma.io/service') | map(attribute='value') | unique | list
+         if registered | length == 1 else [] }}
+  loop: "{{ expected_containers }}"
+  loop_control:
+    label: "{{ item.name }}"

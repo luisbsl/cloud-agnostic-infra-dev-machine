@@ -33,6 +33,15 @@ To ensure that User Stories delivered prior to initializing this framework (e.g.
 3. **Layer 3 (Permanent Storage Logs):** Inspects the compiled `CHANGELOG.md` file artifact directly to handle historical squash merges safely.
 4. **Layer 4 (Fallback Exclusion):** If no matching token exists across any layer, the task defaults to the `🟥 BACKLOG / TODO` row.
 
+## 2.1 Per-Milestone Splitting & Completed Milestones
+
+`compile-changelog.sh` processes **every** `docs/milestones/NN-*.md` file (unnumbered templates are ignored); stories are scoped per milestone, so identical IDs (e.g. `Story 1.1`) never collide.
+
+- **Attribution:** a commit subject tagged `Milestone 02` or `M02` belongs to that milestone. Untagged commits flow chronologically: a `complete Milestone NN` commit closes NN, and later untagged work goes to the next open milestone. Tag post-completion fixes of an older milestone explicitly (e.g. `fix: ... (M01)`).
+- **Completed milestones:** a milestone is `Completed` when its `Status:` says Completed/Done/Delivered/Closed/Released, a completion commit exists, or all its stories are delivered. The first non-completed milestone is `Active`; the rest are `Planned`.
+- **Outputs:** `CHANGELOG.md` gets one `[Unreleased]` section per milestone (completed ones marked `🏁`); `KANBAN.md` gets one board per milestone, with completed boards collapsed in `<details>`. `Active Focus Boundary` always names the active milestone.
+- **Verification:** `bash scripts/test-compile-changelog.sh` (also run in CI).
+
 ## 3. Automated Kanban Grid Synthesis
 
 The compiler automatically outputs `KANBAN.md` using clean, compact markdown grid blocks. Tasks are organized under three explicit columns based on resolved state machine mappings:

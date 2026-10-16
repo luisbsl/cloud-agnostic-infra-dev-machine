@@ -1,0 +1,65 @@
+---
+# Epic 4 prerequisite: creates the blueprint mesh in the live Kuma control plane with mTLS enforced and no initial
+# allow-all policies (zero-trust default), then registers one Dataplane per blueprint tier (delegated gateway when
+# kuma.io/gateway is enabled). Idempotent: Kuma answers 201 on create and 200 on an unchanged upsert.
+# Requires running tier containers. Overridable: kuma_api_url, platform_network_name, mesh_dataplane_port, mesh_mtls_backend.
+- name: Load abstract platform service blueprint for mesh bootstrap
+  ansible.builtin.set_fact:
+    mesh_blueprint: "{{ lookup('file', playbook_dir ~ '/../blueprints/platform-services.json') | from_json }}"
+
+- name: Resolve tier container addresses
+  community.docker.docker_container_info:
+    name: "{{ item.name }}"
+  loop: "{{ mesh_blueprint.services }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: mesh_tiers
+
+- name: Assert every tier is running on the isolated network
+  ansible.builtin.assert:
+    that:
+      - item.exists
+      - item.container.State.Running
+      - (platform_network_name | default('platform-simulation-net')) in item.container.NetworkSettings.Networks
+    fail_msg: "Tier {{ item.item.name }} must be running on {{ platform_network_name | default('platform-simulation-net') }} before mesh registration."
+    quiet: true
+  loop: "{{ mesh_tiers.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+- name: Create or update the zero-trust mesh
+  ansible.builtin.uri:
+    url: "{{ kuma_api_url | default('http://localhost:5681') }}/meshes/{{ mesh_blueprint.mesh }}"
+    method: PUT
+    body_format: json
+    body:
+      type: Mesh
+      name: "{{ mesh_blueprint.mesh }}"
+      mtls:
+        enabledBackend: "{{ mesh_mtls_backend | default('ca-1') }}"
+        backends:
+          - { name: "{{ mesh_mtls_backend | default('ca-1') }}", type: builtin }
+      skipCreatingInitialPolicies: ["*"]
+    status_code: [200, 201]
+  register: mesh_put
+  changed_when: mesh_put.status == 201
+
+- name: Register tier Dataplanes
+  ansible.builtin.uri:
+    url: "{{ kuma_api_url | default('http://localhost:5681') }}/meshes/{{ mesh_blueprint.mesh }}/dataplanes/{{ item.item.name }}"
+    method: PUT
+    body_format: json
+    body: >-
+      {{ {'type': 'Dataplane', 'name': item.item.name, 'mesh': mesh_blueprint.mesh,
+          'networking': ({'address': item.container.NetworkSettings.Networks[platform_network_name | default('platform-simulation-net')].IPAddress}
+            | combine({'gateway': {'type': 'DELEGATED', 'tags': dp_tags}} if dp_gateway else
+                      {'inbound': [{'port': mesh_dataplane_port | default(8080) | int, 'tags': dp_tags}]}))} }}
+    status_code: [200, 201]
+  vars:
+    dp_gateway: "{{ item.item.tags.get('kuma.io/gateway', '') == 'enabled' }}"
+    dp_tags: "{{ item.item.tags | dict2items | rejectattr('key', 'equalto', 'mesh') | items2dict | combine({'tier': item.item.tier}) }}"
+  register: mesh_dataplane_put
+  changed_when: mesh_dataplane_put.status == 201
+  loop: "{{ mesh_tiers.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
