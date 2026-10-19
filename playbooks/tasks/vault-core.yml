@@ -1,0 +1,38 @@
+---
+# Idempotent, cgroup-clamped HashiCorp Vault dev-core engine. Requires the bridge from network-bridge.yml.
+# Overridable: vault_container_name, vault_image, vault_cpus, vault_memory_mb, platform_network_name.
+- name: Inspect target network for Vault core plane
+  community.docker.docker_network_info:
+    name: "{{ platform_network_name | default('platform-simulation-net') }}"
+  register: vault_network
+  tags: [networking, compute]
+
+- name: Assert isolated bridge network is operational
+  ansible.builtin.assert:
+    that: vault_network.exists
+    fail_msg: "Network {{ platform_network_name | default('platform-simulation-net') }} is missing; run tasks/network-bridge.yml first."
+    quiet: true
+  tags: [networking, compute]
+
+- name: Allocate pinned HashiCorp Vault core engine container
+  community.docker.docker_container:
+    name: "{{ vault_container_name | default('platform-vault-core') }}"
+    image: "{{ vault_image | default('docker.io/library/vault:1.15.2') }}"
+    state: started
+    restart_policy: unless-stopped
+    cpus: "{{ vault_cpus | default(1) }}"
+    memory: "{{ vault_memory_mb | default(2048) }}M"
+    networks:
+      - name: "{{ platform_network_name | default('platform-simulation-net') }}"
+    network_mode: "{{ platform_network_name | default('platform-simulation-net') }}"
+    published_ports:
+      - "127.0.0.1:8200:8200"
+    env:
+      VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
+      VAULT_LOCAL_CONFIG: |
+        storage "memory" {}
+        listener "tcp" {
+          address = "0.0.0.0:8200"
+          tls_disable = 1
+        }
+  tags: [compute]
